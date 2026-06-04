@@ -2,6 +2,7 @@
   "name": "railway-signal-runner",
   "version": "0.1.0",
   "private": true,
+  "license": "GPL-2.0-only",
   "type": "module",
   "description": "A Vue, CesiumJS and Three.js first-person railway signal inspection mini-game.",
   "scripts": {
