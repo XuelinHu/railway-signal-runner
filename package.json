@@ -1,0 +1,23 @@
+{
+  "name": "railway-signal-runner",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "A Vue, CesiumJS and Three.js first-person railway signal inspection mini-game.",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "vite build",
+    "preview": "vite preview --host 0.0.0.0"
+  },
+  "dependencies": {
+    "@lucide/vue": "^1.17.0",
+    "cesium": "^1.137.0",
+    "three": "^0.182.0",
+    "vue": "^3.5.28"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^6.0.4",
+    "vite": "^7.3.1",
+    "vite-plugin-cesium": "^1.2.23"
+  }
+}
