@@ -1,5 +1,13 @@
 # Railway Signal Runner
 
+<p align="center">
+  <img height="20" alt="Vue 3.5.28" src="https://img.shields.io/badge/vue-3.5.28-4FC08D" />
+  <img height="20" alt="Vite 7.3.1" src="https://img.shields.io/badge/vite-7.3.1-646CFF" />
+  <img height="20" alt="CesiumJS 1.137.0" src="https://img.shields.io/badge/cesiumjs-1.137.0-6CADDF" />
+  <img height="20" alt="Three.js 0.182.0" src="https://img.shields.io/badge/three.js-0.182.0-000000" />
+  <img height="20" alt="License GPL-2.0" src="https://img.shields.io/badge/license-GPL--2.0-3DA639" />
+</p>
+
 基于 Vue 3、CesiumJS、Three.js 和 GLTFLoader 的第一人称铁道信号巡视小游戏。
 
 ## 功能
