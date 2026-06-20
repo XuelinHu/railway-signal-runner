@@ -5,10 +5,12 @@ import cesium from 'vite-plugin-cesium'
 export default defineConfig({
   plugins: [vue(), cesium()],
   server: {
-    port: 4177
+    host: '0.0.0.0',
+    port: 4000
   },
   preview: {
-    port: 4178
+    host: '0.0.0.0',
+    port: 4000
   },
   build: {
     target: 'esnext'

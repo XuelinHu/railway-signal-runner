@@ -28,7 +28,7 @@ npm run dev
 默认开发地址：
 
 ```text
-http://localhost:4177/
+http://localhost:4000/
 ```
 
 ## 构建
