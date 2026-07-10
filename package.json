@@ -6,15 +6,24 @@
   "type": "module",
   "description": "A Vue, CesiumJS and Three.js first-person railway signal inspection mini-game.",
   "scripts": {
-    "dev": "vite --host 0.0.0.0",
+    "dev": "vite --host 0.0.0.0 --port 4000",
     "build": "vite build",
-    "preview": "vite preview --host 0.0.0.0"
+    "preview": "vite preview --host 0.0.0.0 --port 4000"
   },
   "dependencies": {
     "@lucide/vue": "^1.17.0",
+    "@vueuse/core": "^14.3.0",
+    "cannon-es": "^0.20.0",
     "cesium": "^1.137.0",
+    "dexie": "^4.4.4",
+    "nanoid": "^5.1.14",
+    "pg": "^8.22.0",
+    "pinia": "^3.0.4",
     "three": "^0.182.0",
-    "vue": "^3.5.28"
+    "three-mesh-bvh": "^0.9.10",
+    "vue": "^3.5.28",
+    "vue-router": "^5.1.0",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^6.0.4",

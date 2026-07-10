@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { clone as cloneModel } from 'three/examples/jsm/utils/SkeletonUtils.js'
+import { findCatalogItem } from './modelCatalog'
 
 const CAMERA_HEIGHT = 3.6
 const WORLD_LIMITS = {
@@ -79,6 +80,10 @@ export function createRailwayGame({ canvas, host, onState, onSignals, onEvent })
   const loader = new GLTFLoader()
   const clock = new THREE.Clock()
   const models = new Map()
+  const editableObjects = new Map()
+  const editorGroup = new THREE.Group()
+  const raycaster = new THREE.Raycaster()
+  const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0)
   const mixers = []
   const keys = new Map()
   const signalRuntime = new Map()
@@ -103,6 +108,10 @@ export function createRailwayGame({ canvas, host, onState, onSignals, onEvent })
   let lastPosition = new THREE.Vector3(-116, CAMERA_HEIGHT, -87)
   let dragLook = null
   let runStartedAt = 0
+  let editorMode = false
+  let selectedObjectId = null
+  let selectionBox = null
+  let draggedObject = null
 
   const state = {
     ready: false,
@@ -114,7 +123,7 @@ export function createRailwayGame({ canvas, host, onState, onSignals, onEvent })
     distance: 0,
     health: 100,
     inspected: 0,
-    total: SIGNAL_POINTS.length,
+    total: 0,
     completed: false,
     phase: '模型加载',
     nearestId: 'S-01',
@@ -159,18 +168,20 @@ export function createRailwayGame({ canvas, host, onState, onSignals, onEvent })
     updateCameraRotation()
     setupLights()
     createGround()
-    createRailBed()
-    createVegetation()
-    createBoundaryMarkers()
+    scene.add(editorGroup)
     bindEvents()
     resize()
 
     resizeObserver = new ResizeObserver(resize)
     resizeObserver.observe(host || canvas)
 
+    ready = true
+    state.ready = true
+    state.loading = '已就绪'
+    state.phase = '自由布置'
     emitState(0, true)
     emitSignals()
-    loadModels()
+    onEvent?.({ type: 'ready', message: '空白场景已就绪' })
     animate()
   }
 
@@ -625,11 +636,31 @@ export function createRailwayGame({ canvas, host, onState, onSignals, onEvent })
     canvas.addEventListener('mousemove', onMouseMove)
     canvas.addEventListener('pointerdown', onPointerDown)
     canvas.addEventListener('pointermove', onPointerMove)
+    canvas.addEventListener('contextmenu', preventCanvasMenu)
     window.addEventListener('pointerup', onPointerUp)
   }
 
+  function preventCanvasMenu(event) {
+    event.preventDefault()
+  }
+
   function onKeyDown(event) {
-    if (event.code === 'KeyR') {
+    if (editorMode && [
+      'ArrowUp',
+      'ArrowDown',
+      'ArrowLeft',
+      'ArrowRight',
+      'KeyG',
+      'KeyR',
+      'KeyS',
+      'Delete',
+      'Backspace',
+      'Escape'
+    ].includes(event.code)) {
+      return
+    }
+
+    if (event.code === 'KeyR' && !editorMode) {
       reset()
       return
     }
@@ -667,7 +698,7 @@ export function createRailwayGame({ canvas, host, onState, onSignals, onEvent })
   }
 
   function onMouseMove(event) {
-    if (!running || !pointerLocked) return
+    if ((!running && !editorMode) || !pointerLocked) return
     yaw -= event.movementX * 0.0022
     pitch -= event.movementY * 0.002
     pitch = THREE.MathUtils.clamp(pitch, -0.82, 0.55)
@@ -675,6 +706,21 @@ export function createRailwayGame({ canvas, host, onState, onSignals, onEvent })
   }
 
   function onPointerDown(event) {
+    if (editorMode && event.button === 2) {
+      canvas.requestPointerLock?.()
+      return
+    }
+    if (editorMode) {
+      const id = selectEditableObjectAt(event)
+      const object = id ? editableObjects.get(id) : null
+      draggedObject = object ? {
+        id,
+        startClientY: event.clientY,
+        startHeight: object.position.y
+      } : null
+      return
+    }
+
     if (event.pointerType === 'mouse') return
     dragLook = {
       x: event.clientX,
@@ -683,6 +729,10 @@ export function createRailwayGame({ canvas, host, onState, onSignals, onEvent })
   }
 
   function onPointerMove(event) {
+    if (editorMode && draggedObject) {
+      moveEditableObjectToPointer(draggedObject, event)
+      return
+    }
     if (!dragLook || event.pointerType === 'mouse') return
     const dx = event.clientX - dragLook.x
     const dy = event.clientY - dragLook.y
@@ -696,13 +746,16 @@ export function createRailwayGame({ canvas, host, onState, onSignals, onEvent })
 
   function onPointerUp() {
     dragLook = null
+    draggedObject = null
   }
 
   function animate() {
     animationFrame = requestAnimationFrame(animate)
     const delta = Math.min(clock.getDelta(), 0.06)
 
-    if (running && ready && !completed) {
+    if (ready && editorMode && !completed) {
+      updatePlayer(delta)
+    } else if (running && ready && !completed) {
       elapsed += delta
       updatePlayer(delta)
       updateSignals(delta)
@@ -763,12 +816,12 @@ export function createRailwayGame({ canvas, host, onState, onSignals, onEvent })
       if (distance > 8) return
 
       signal.inspected = true
-      signal.light.color.setHex(inspectedColor())
-      signal.bulb.material.color.setHex(inspectedColor())
-      signal.bulb.material.emissive.setHex(inspectedColor())
-      signal.ring.material.color.setHex(inspectedColor())
-      signal.ring.material.emissive.setHex(inspectedColor())
-      signal.ring.scale.setScalar(1.25)
+      signal.light?.color?.setHex(inspectedColor())
+      signal.bulb?.material?.color?.setHex(inspectedColor())
+      signal.bulb?.material?.emissive?.setHex(inspectedColor())
+      signal.ring?.material?.color?.setHex(inspectedColor())
+      signal.ring?.material?.emissive?.setHex(inspectedColor())
+      signal.ring?.scale?.setScalar(1.25)
       playNotice()
       onEvent?.({ type: 'signal', message: `${signal.id} 已巡视` })
       emitSignals()
@@ -779,9 +832,9 @@ export function createRailwayGame({ canvas, host, onState, onSignals, onEvent })
     const t = elapsed * 2.6
     signalRuntime.forEach((signal, index) => {
       const pulse = 1 + Math.sin(t + index * 0.8) * 0.08
-      signal.ring.scale.setScalar(signal.inspected ? 1.2 : pulse)
-      signal.bulb.material.emissiveIntensity = signal.inspected ? 1.35 : 1.4 + Math.sin(t + index) * 0.25
-      signal.group.rotation.y += delta * 0.04
+      signal.ring?.scale?.setScalar(signal.inspected ? 1.2 : pulse)
+      if (signal.bulb?.material) signal.bulb.material.emissiveIntensity = signal.inspected ? 1.35 : 1.4 + Math.sin(t + index) * 0.25
+      if (signal.animateGroup !== false && signal.group) signal.group.rotation.y += delta * 0.04
     })
   }
 
@@ -808,7 +861,7 @@ export function createRailwayGame({ canvas, host, onState, onSignals, onEvent })
     const inspected = Array.from(signalRuntime.values()).filter((signal) => signal.inspected).length
     const stationDistance = flatDistance(camera.position.x, camera.position.z, STATION_POINT.x, STATION_POINT.z)
 
-    if (inspected === SIGNAL_POINTS.length && stationDistance < 14) {
+    if (inspected === signalRuntime.size && stationDistance < 14) {
       completed = true
       running = false
       state.completed = true
@@ -819,7 +872,7 @@ export function createRailwayGame({ canvas, host, onState, onSignals, onEvent })
       return
     }
 
-    state.phase = inspected === SIGNAL_POINTS.length ? '返抵车站' : '沿线巡视'
+    state.phase = inspected === signalRuntime.size ? '返抵车站' : '沿线巡视'
   }
 
   function flatDistance(ax, az, bx, bz) {
@@ -869,7 +922,7 @@ export function createRailwayGame({ canvas, host, onState, onSignals, onEvent })
     state.distance = distanceTravelled
     state.health = health
     state.inspected = inspected
-    state.total = SIGNAL_POINTS.length
+    state.total = signalRuntime.size
     state.completed = completed
     state.nearestId = nearest.id
     state.nearestLabel = nearest.label
@@ -886,13 +939,16 @@ export function createRailwayGame({ canvas, host, onState, onSignals, onEvent })
     onState?.({ ...state, position: { ...state.position }, geo: { ...state.geo }, delta })
   }
 
-  function emitSignals() {
-    const payload = SIGNAL_POINTS.map((point) => {
-      const runtime = signalRuntime.get(point.id)
-      const geo = worldToGeo(point.x, point.z)
+function emitSignals() {
+    const payload = Array.from(signalRuntime.values()).map((runtime) => {
+      const geo = worldToGeo(runtime.x, runtime.z)
       return {
-        ...point,
-        inspected: runtime?.inspected || false,
+        id: runtime.id,
+        label: runtime.label,
+        state: runtime.state,
+        x: runtime.x,
+        z: runtime.z,
+        inspected: runtime.inspected || false,
         geo
       }
     })
@@ -908,6 +964,427 @@ export function createRailwayGame({ canvas, host, onState, onSignals, onEvent })
     camera.aspect = width / height
     camera.updateProjectionMatrix()
     renderer.setSize(width, height, false)
+  }
+
+  async function addCatalogObject(catalogKey, pointer) {
+    const catalog = findCatalogItem(catalogKey)
+    if (!catalog) {
+      onEvent?.({ type: 'warning', message: '模型配置不存在' })
+      return null
+    }
+
+    const object = await createEditableObject(catalog)
+    const point = pointer ? screenToGround(pointer.clientX, pointer.clientY) : null
+    if (point) {
+      object.position.copy(point)
+    } else {
+      const forward = new THREE.Vector3(0, 0, -1).applyEuler(camera.rotation)
+      object.position.copy(camera.position).addScaledVector(forward, 18)
+      object.position.y = 0
+    }
+
+    object.rotation.y = snapRotation(catalog.snap)
+    editorGroup.add(object)
+    editableObjects.set(object.userData.editor.id, object)
+    selectEditableObject(object.userData.editor.id)
+    emitEditorEvent()
+    return object.userData.editor.id
+  }
+
+  async function createEditableObject(catalog, sourceObject) {
+    const object = await createCatalogVisual(catalog)
+    const id = sourceObject?.id || `${catalog.key}-${Date.now()}-${Math.round(Math.random() * 10000)}`
+    const scale = sourceObject?.scale || {
+      x: catalog.defaultScale,
+      y: catalog.defaultScale,
+      z: catalog.defaultScale
+    }
+
+    object.name = id
+    object.position.set(sourceObject?.position?.x || 0, sourceObject?.position?.y || 0, sourceObject?.position?.z || 0)
+    object.rotation.set(sourceObject?.rotation?.x || 0, sourceObject?.rotation?.y || 0, sourceObject?.rotation?.z || 0)
+    object.scale.set(scale.x, scale.y, scale.z)
+  object.userData.editor = {
+    id,
+    catalogKey: catalog.key,
+    name: sourceObject?.name || catalog.name,
+    interactive: sourceObject?.interactive ?? catalog.interactive,
+    inspectionPoint: sourceObject?.inspectionPoint ?? catalog.inspectionPoint,
+    task: sourceObject?.task || createDefaultObjectTask(sourceObject?.name || catalog.name)
+  }
+    object.traverse((child) => {
+      child.userData.editorRoot = object
+      if (!child.isMesh) return
+      child.castShadow = true
+      child.receiveShadow = true
+    })
+    return object
+  }
+
+  async function createCatalogVisual(catalog) {
+    if (catalog.modelUrl) {
+      try {
+        const gltf = await loadCatalogModel(catalog.modelUrl)
+        return cloneScene(gltf.scene)
+      } catch {
+        onEvent?.({ type: 'warning', message: `${catalog.name} 模型未找到，已使用占位模型` })
+      }
+    }
+    return createFallbackCatalogObject(catalog)
+  }
+
+  async function loadCatalogModel(url) {
+    const cacheKey = `catalog:${url}`
+    if (models.has(cacheKey)) return models.get(cacheKey)
+    const gltf = await loader.loadAsync(url)
+    models.set(cacheKey, gltf)
+    return gltf
+  }
+
+  function createFallbackCatalogObject(catalog) {
+    if (catalog.key === 'cable_trough') return createFallbackCableTrough()
+    if (catalog.category === 'signal') return createFallbackSignal()
+    if (catalog.category === 'switch') return createFallbackSwitchMachine()
+    if (catalog.category === 'equipment') return createFallbackEquipmentBox()
+    if (catalog.category === 'track') return createFallbackTrackSegment()
+    return createFallbackMarker(catalog)
+  }
+
+  function createFallbackTrackSegment() {
+    const group = new THREE.Group()
+    const railMaterial = new THREE.MeshStandardMaterial({ color: 0x323535, metalness: 0.45, roughness: 0.35 })
+    const sleeperMaterial = new THREE.MeshStandardMaterial({ color: 0x665042, roughness: 0.82 })
+    ;[-0.35, 0.35].forEach((offset) => {
+      const rail = new THREE.Mesh(new THREE.BoxGeometry(7.8, 0.08, 0.08), railMaterial)
+      rail.position.set(0, 0.16, offset)
+      group.add(rail)
+    })
+    for (let i = -4; i <= 4; i += 1) {
+      const sleeper = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.08, 1.05), sleeperMaterial)
+      sleeper.position.set(i * 0.9, 0.06, 0)
+      group.add(sleeper)
+    }
+    return group
+  }
+
+  function createFallbackSwitchMachine() {
+    const group = new THREE.Group()
+    const body = new THREE.Mesh(
+      new THREE.BoxGeometry(1.4, 0.45, 0.62),
+      new THREE.MeshStandardMaterial({ color: 0x56616a, roughness: 0.62, metalness: 0.2 })
+    )
+    body.position.y = 0.32
+    group.add(body)
+    const rod = new THREE.Mesh(
+      new THREE.BoxGeometry(2.8, 0.08, 0.08),
+      new THREE.MeshStandardMaterial({ color: 0xb9c0c4, roughness: 0.4, metalness: 0.6 })
+    )
+    rod.position.set(0.2, 0.28, -0.44)
+    group.add(rod)
+    return group
+  }
+
+  function createFallbackEquipmentBox() {
+    const group = new THREE.Group()
+    const box = new THREE.Mesh(
+      new THREE.BoxGeometry(1.05, 1.65, 0.58),
+      new THREE.MeshStandardMaterial({ color: 0x8d9998, roughness: 0.58, metalness: 0.22 })
+    )
+    box.position.y = 0.92
+    group.add(box)
+    const door = new THREE.Mesh(
+      new THREE.BoxGeometry(0.92, 1.36, 0.035),
+      new THREE.MeshStandardMaterial({ color: 0x6f7d7c, roughness: 0.56, metalness: 0.18 })
+    )
+    door.position.set(0, 0.92, -0.31)
+    group.add(door)
+    return group
+  }
+
+  function createFallbackCableTrough() {
+    const group = new THREE.Group()
+    const base = new THREE.Mesh(
+      new THREE.BoxGeometry(3.6, 0.22, 0.42),
+      new THREE.MeshStandardMaterial({ color: 0x8f918b, roughness: 0.86 })
+    )
+    base.position.y = 0.12
+    group.add(base)
+    return group
+  }
+
+  function createFallbackMarker(catalog) {
+    const group = new THREE.Group()
+    const marker = new THREE.Mesh(
+      new THREE.BoxGeometry(0.9, 0.9, 0.9),
+      new THREE.MeshStandardMaterial({ color: catalog.inspectionPoint ? 0xf0c94d : 0x61d9ff, roughness: 0.55 })
+    )
+    marker.position.y = 0.45
+    group.add(marker)
+    return group
+  }
+
+  function screenToGround(clientX, clientY) {
+    const rect = canvas.getBoundingClientRect()
+    const mouse = new THREE.Vector2(
+      ((clientX - rect.left) / rect.width) * 2 - 1,
+      -((clientY - rect.top) / rect.height) * 2 + 1
+    )
+    raycaster.setFromCamera(mouse, camera)
+    const point = new THREE.Vector3()
+    if (!raycaster.ray.intersectPlane(groundPlane, point)) return null
+    point.x = THREE.MathUtils.clamp(point.x, WORLD_LIMITS.minX, WORLD_LIMITS.maxX)
+    point.z = THREE.MathUtils.clamp(point.z, WORLD_LIMITS.minZ, WORLD_LIMITS.maxZ)
+    point.y = 0
+    return point
+  }
+
+  function selectEditableObjectAt(event) {
+    const rect = canvas.getBoundingClientRect()
+    const mouse = new THREE.Vector2(
+      ((event.clientX - rect.left) / rect.width) * 2 - 1,
+      -((event.clientY - rect.top) / rect.height) * 2 + 1
+    )
+    raycaster.setFromCamera(mouse, camera)
+    const meshes = []
+    editorGroup.traverse((child) => {
+      if (child.isMesh) meshes.push(child)
+    })
+    const hit = raycaster.intersectObjects(meshes, false)[0]
+    const id = hit?.object?.userData?.editorRoot?.userData?.editor?.id || null
+    selectEditableObject(id)
+    return id
+  }
+
+  function moveEditableObjectToPointer(drag, event) {
+    const object = editableObjects.get(drag.id)
+    if (!object) return
+
+    if (event.shiftKey) {
+      object.position.y = THREE.MathUtils.clamp(
+        drag.startHeight + (drag.startClientY - event.clientY) * 0.08,
+        -50,
+        100
+      )
+      selectionBox?.update()
+      syncTrainingTargetsFromEditableObjects()
+      emitEditorEvent()
+      return
+    }
+
+    const point = screenToGround(event.clientX, event.clientY)
+    if (!point) return
+
+    object.position.x = point.x
+    object.position.z = point.z
+    selectionBox?.update()
+    syncTrainingTargetsFromEditableObjects()
+    emitEditorEvent()
+  }
+
+  function selectEditableObject(id) {
+    selectedObjectId = id
+    if (selectionBox) {
+      scene.remove(selectionBox)
+      selectionBox.dispose()
+      selectionBox = null
+    }
+    const object = id ? editableObjects.get(id) : null
+    if (object) {
+      selectionBox = new THREE.BoxHelper(object, 0x4c9ffe)
+      scene.add(selectionBox)
+    }
+    emitEditorEvent()
+  }
+
+  function moveSelectedObject(dx, dz, dy = 0) {
+    const object = selectedObjectId ? editableObjects.get(selectedObjectId) : null
+    if (!object) return
+    object.position.x = THREE.MathUtils.clamp(object.position.x + dx, WORLD_LIMITS.minX, WORLD_LIMITS.maxX)
+    object.position.z = THREE.MathUtils.clamp(object.position.z + dz, WORLD_LIMITS.minZ, WORLD_LIMITS.maxZ)
+    object.position.y = THREE.MathUtils.clamp(object.position.y + dy, -50, 100)
+    selectionBox?.update()
+    syncTrainingTargetsFromEditableObjects()
+    emitEditorEvent()
+  }
+
+  function rotateSelectedObject(angle) {
+    const object = selectedObjectId ? editableObjects.get(selectedObjectId) : null
+    if (!object) return
+    object.rotation.y += angle
+    selectionBox?.update()
+    emitEditorEvent()
+  }
+
+  function scaleSelectedObject(factor) {
+    const object = selectedObjectId ? editableObjects.get(selectedObjectId) : null
+    if (!object || !Number.isFinite(factor) || factor <= 0) return
+    object.scale.set(
+      THREE.MathUtils.clamp(object.scale.x * factor, 0.01, 1000),
+      THREE.MathUtils.clamp(object.scale.y * factor, 0.01, 1000),
+      THREE.MathUtils.clamp(object.scale.z * factor, 0.01, 1000)
+    )
+    selectionBox?.update()
+    emitEditorEvent()
+  }
+
+  function setSelectedObjectTransform(transform) {
+    const object = selectedObjectId ? editableObjects.get(selectedObjectId) : null
+    if (!object) return
+
+    if (transform.position) {
+      object.position.set(
+        clampNumber(transform.position.x, object.position.x, WORLD_LIMITS.minX, WORLD_LIMITS.maxX),
+        clampNumber(transform.position.y, object.position.y, -50, 100),
+        clampNumber(transform.position.z, object.position.z, WORLD_LIMITS.minZ, WORLD_LIMITS.maxZ)
+      )
+    }
+    if (transform.rotation) {
+      object.rotation.set(
+        finiteNumber(transform.rotation.x, object.rotation.x),
+        finiteNumber(transform.rotation.y, object.rotation.y),
+        finiteNumber(transform.rotation.z, object.rotation.z)
+      )
+    }
+    if (transform.scale) {
+      object.scale.set(
+        clampNumber(transform.scale.x, object.scale.x, 0.01, 1000),
+        clampNumber(transform.scale.y, object.scale.y, 0.01, 1000),
+        clampNumber(transform.scale.z, object.scale.z, 0.01, 1000)
+      )
+    }
+
+    selectionBox?.update()
+    syncTrainingTargetsFromEditableObjects()
+    emitEditorEvent()
+  }
+
+  function finiteNumber(value, fallback) {
+    const number = Number(value)
+    return Number.isFinite(number) ? number : fallback
+  }
+
+  function clampNumber(value, fallback, min, max) {
+    return THREE.MathUtils.clamp(finiteNumber(value, fallback), min, max)
+  }
+
+  function deleteSelectedObject() {
+    const object = selectedObjectId ? editableObjects.get(selectedObjectId) : null
+    if (!object) return
+    editorGroup.remove(object)
+    editableObjects.delete(selectedObjectId)
+    selectEditableObject(null)
+    emitEditorEvent()
+  }
+
+  function clearEditableObjects() {
+    Array.from(editableObjects.values()).forEach((object) => {
+      editorGroup.remove(object)
+    })
+    editableObjects.clear()
+    selectEditableObject(null)
+    syncTrainingTargetsFromEditableObjects()
+    emitEditorEvent()
+  }
+
+  async function importEditableObjects(objects) {
+    clearEditableObjects()
+    for (const sourceObject of objects) {
+      const catalog = findCatalogItem(sourceObject.catalogKey)
+      if (!catalog) continue
+      const object = await createEditableObject(catalog, sourceObject)
+      editorGroup.add(object)
+      editableObjects.set(object.userData.editor.id, object)
+    }
+    syncTrainingTargetsFromEditableObjects()
+    emitEditorEvent()
+  }
+
+  function syncTrainingTargetsFromEditableObjects() {
+    const targets = Array.from(editableObjects.values()).filter((object) => object.userData.editor.inspectionPoint)
+    signalRuntime.clear()
+    if (targets.length === 0) {
+      emitSignals()
+      emitState(0, true)
+      return
+    }
+
+    targets.forEach((object, index) => {
+      const editor = object.userData.editor
+      signalRuntime.set(editor.id, {
+        id: editor.id,
+        label: editor.task?.title || editor.name || `巡检点 ${index + 1}`,
+        state: editor.task?.faultType || 'normal',
+        x: object.position.x,
+        z: object.position.z,
+        inspected: false,
+        group: object,
+        animateGroup: false
+      })
+    })
+    emitSignals()
+    emitState(0, true)
+  }
+
+function exportEditableObjects() {
+  return Array.from(editableObjects.values()).map((object) => ({
+    id: object.userData.editor.id,
+    catalogKey: object.userData.editor.catalogKey,
+    name: object.userData.editor.name,
+      position: { x: object.position.x, y: object.position.y, z: object.position.z },
+      rotation: { x: object.rotation.x, y: object.rotation.y, z: object.rotation.z },
+    scale: { x: object.scale.x, y: object.scale.y, z: object.scale.z },
+    interactive: object.userData.editor.interactive,
+    inspectionPoint: object.userData.editor.inspectionPoint,
+    task: object.userData.editor.task
+  }))
+}
+
+function updateSelectedObjectConfig(config) {
+  const object = selectedObjectId ? editableObjects.get(selectedObjectId) : null
+  if (!object) return
+
+  object.userData.editor = {
+    ...object.userData.editor,
+    ...config,
+    task: {
+      ...createDefaultObjectTask(object.userData.editor.name),
+      ...object.userData.editor.task,
+      ...config.task
+    }
+  }
+  syncTrainingTargetsFromEditableObjects()
+  emitEditorEvent()
+}
+
+function createDefaultObjectTask(name) {
+  return {
+    title: `检查${name}`,
+    description: '靠近目标设备后完成巡检确认。',
+    faultType: 'normal',
+    expectedAction: 'inspect',
+    score: 10,
+    hint: ''
+  }
+}
+
+  function setEditorMode(value) {
+    editorMode = value
+    if (editorMode) pause()
+    emitEditorEvent()
+  }
+
+  function emitEditorEvent() {
+    onEvent?.({
+      type: 'editor',
+      message: '场景编辑状态已更新',
+      objects: exportEditableObjects(),
+      selectedId: selectedObjectId
+    })
+  }
+
+  function snapRotation(snap) {
+    if (snap === 'trackside' || snap === 'turnout_side') return -ROUTE_ANGLE
+    return 0
   }
 
   function playNotice() {
@@ -976,12 +1453,12 @@ export function createRailwayGame({ canvas, host, onState, onSignals, onEvent })
     signalRuntime.forEach((signal) => {
       signal.inspected = false
       const color = signalColor(signal.state)
-      signal.light.color.setHex(color)
-      signal.bulb.material.color.setHex(color)
-      signal.bulb.material.emissive.setHex(color)
-      signal.ring.material.color.setHex(color)
-      signal.ring.material.emissive.setHex(color)
-      signal.ring.scale.setScalar(1)
+      signal.light?.color?.setHex(color)
+      signal.bulb?.material?.color?.setHex(color)
+      signal.bulb?.material?.emissive?.setHex(color)
+      signal.ring?.material?.color?.setHex(color)
+      signal.ring?.material?.emissive?.setHex(color)
+      signal.ring?.scale?.setScalar(1)
     })
     state.completed = false
     state.phase = ready ? '沿线巡视' : '模型加载'
@@ -1021,6 +1498,7 @@ export function createRailwayGame({ canvas, host, onState, onSignals, onEvent })
     canvas.removeEventListener('mousemove', onMouseMove)
     canvas.removeEventListener('pointerdown', onPointerDown)
     canvas.removeEventListener('pointermove', onPointerMove)
+    canvas.removeEventListener('contextmenu', preventCanvasMenu)
     window.removeEventListener('pointerup', onPointerUp)
     stopBgm()
     renderer.dispose()
@@ -1043,6 +1521,17 @@ export function createRailwayGame({ canvas, host, onState, onSignals, onEvent })
     reset,
     dispose,
     setAudioEnabled,
-    setVirtualInput
+    setVirtualInput,
+    setEditorMode,
+    addCatalogObject,
+    moveSelectedObject,
+    rotateSelectedObject,
+    scaleSelectedObject,
+    setSelectedObjectTransform,
+    deleteSelectedObject,
+    clearEditableObjects,
+    importEditableObjects,
+    exportEditableObjects,
+    updateSelectedObjectConfig
   }
 }

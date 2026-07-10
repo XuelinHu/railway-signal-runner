@@ -41,6 +41,18 @@ npm run preview
 ## 资源
 
 模型资源位于 `public/assets/models`，来自当前工作区的 `railway_sign/public/assets/models`。
+<!-- codex-runtime-config:start -->
+## 运行配置与数据存储
+
+- 前端默认端口：`4000`，Vite 开发和预览服务均绑定 `0.0.0.0:4000`。
+- 本机访问：`http://127.0.0.1:4000/`。
+- FRP 外网访问：`http://47.120.48.245:14000/`。
+- 浏览器本地数据库：使用 IndexedDB，Dexie 数据库名为 `railway-signal-runner`，对象仓库包含 `scenes` 和 `records`。
+- 可选 PostgreSQL 初始化脚本：`scripts/init-postgres.mjs`。
+- 可选 PostgreSQL 数据库名称：`railway_signal_runner`。
+- 可选连接变量：`PGHOST=127.0.0.1`、`PGPORT=5432`、`PGUSER=deipss`、`PGPASSWORD=<your-postgres-password>`、`PGDATABASE=railway_signal_runner`。
+- PostgreSQL 表：`training_scenes`、`training_records`；当前前端训练场景主要仍保存在浏览器 IndexedDB。
+<!-- codex-runtime-config:end -->
 
 ## 开源协议
 

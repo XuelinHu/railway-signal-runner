@@ -1,7 +1,3 @@
 <template>
-  <RailwayFpsGame />
+  <RouterView />
 </template>
-
-<script setup>
-import RailwayFpsGame from './components/RailwayFpsGame.vue'
-</script>
