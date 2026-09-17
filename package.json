@@ -6,9 +6,9 @@
   "type": "module",
   "description": "A Vue, CesiumJS and Three.js first-person railway signal inspection mini-game.",
   "scripts": {
-    "dev": "vite --host 0.0.0.0 --port 4000",
+    "dev": "vite --host 0.0.0.0 --port 4029",
     "build": "vite build",
-    "preview": "vite preview --host 0.0.0.0 --port 4000"
+    "preview": "vite preview --host 0.0.0.0 --port 4029"
   },
   "dependencies": {
     "@lucide/vue": "^1.17.0",

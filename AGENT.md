@@ -8,8 +8,8 @@
 
 ## Runtime
 
-- Default port: `4000`.
-- Local URL: `http://127.0.0.1:4000/`.
+- Default port: `4029`.
+- Local URL: `http://127.0.0.1:4029/`.
 - FRP URL: `http://47.120.48.245:14000/`.
 - Dev: `npm run dev`.
 - Build: `npm run build`.
