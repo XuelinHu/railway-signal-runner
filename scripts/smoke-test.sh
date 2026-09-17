@@ -14,7 +14,10 @@ STUDENT="stu${STAMP}"
 # 每轮用独立的管理员账号。登录接口按账号限流（10 次 / 15 分钟），
 # 若反复用内置 admin 账号跑测试，几轮之后桶就满了，之后全是 429。
 ADMIN_USER="smokeadm${STAMP}"
-ADMIN_PASS='SmokeAdmin12345'
+# 密码每轮随机，不写字面量：本仓库是公开的，而 API 端口经 FRP 映射到公网，
+# 硬编码的管理员密码等于把后台账号公开出去。脚本结束时会删掉自己建的账号
+# （见 cleanup），这一行是那道防线万一漏掉时的第二道。
+ADMIN_PASS="Smoke${RANDOM}${RANDOM}aA1"
 
 # 每次运行伪装成一个不同的客户端 IP，以免上一轮跑出的限流计数把下一轮挡掉。
 # 这不是作弊：服务端 getClientIp() 本就优先读 x-forwarded-for，线上由 FRP 注入真实来源 IP。
@@ -47,6 +50,35 @@ except Exception:
 
 post() { curl -s -X POST "$BASE$1" -H 'Content-Type: application/json' -H "X-Forwarded-For: $FAKE_IP" -d "$2" ${3:+-H "Authorization: Bearer $3"}; }
 get()  { curl -s "$BASE$1" -H "X-Forwarded-For: $FAKE_IP" ${2:+-H "Authorization: Bearer $2"}; }
+
+# 删除本轮自建的账号。
+#
+# 为什么必须清：管理员账号是每轮新建的（为了绕开登录限流），不清就会在库里
+# 越堆越多，而 8038 经 FRP 映射到公网 47.120.48.245:18038——一堆没人管的
+# 管理员账号等于一排后门。挂在 trap 上，中途断言失败也会执行。
+#
+# 走的是 DELETE /api/admin/users/:id，即软删（deleted_at + status=disabled）；
+# 登录查询一律带 `deleted_at IS NULL`，所以软删之后账号无法再登录。
+cleanup() {
+  [ -n "${ATOKEN:-}" ] || return 0
+  local name id
+  for name in "${STUDENT:-}" "${ADMIN_USER:-}" "${LOCKUSER:-}"; do
+    [ -n "$name" ] || continue
+    id="$(get "/api/admin/users?q=$name&pageSize=5" "$ATOKEN" | python3 -c "
+import sys, json
+try:
+    items = json.load(sys.stdin).get('items', [])
+    print(next((u['id'] for u in items if u['username'] == '''$name'''), ''))
+except Exception:
+    print('')
+" 2>/dev/null)"
+    if [ -n "$id" ]; then
+      curl -s -X DELETE "$BASE/api/admin/users/$id" \
+        -H "Authorization: Bearer $ATOKEN" -H "X-Forwarded-For: $FAKE_IP" > /dev/null
+    fi
+  done
+}
+trap cleanup EXIT
 
 say "1. 健康检查"
 HEALTH="$(get /api/health)"
@@ -189,7 +221,10 @@ CHATOUT="$(curl -sN -X POST "$BASE/api/ai/chat" -H 'Content-Type: application/js
   -H "X-Forwarded-For: $FAKE_IP" \
   -H "Authorization: Bearer $RTOKEN2" \
   -d "{\"model\":\"$(printf '%s' "$MODELS" | python3 -c "import sys,json;print(json.load(sys.stdin).get('defaultModel',''))" 2>/dev/null)\",\"message\":\"用一句话说明铁路信号机的作用\"}" \
-  --max-time 120 2>/dev/null)"
+  --max-time 300 2>/dev/null)"
+# 超时给到 300s 而不是 120s：qwen3:14b 是思考模型，空闲时这一轮也要 45-90s，
+# 若同时有别的进程在拉模型或跑推理（共用同一块 GPU），实测能涨到 135s。
+# 原来的 120s 会被截断成"流中途断掉"，看起来像三个功能缺陷，其实只是没等够。
 
 FRAMES="$(printf '%s' "$CHATOUT" | grep -c '"__railway"' || true)"
 
