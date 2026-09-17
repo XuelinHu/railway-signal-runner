@@ -46,7 +46,7 @@ npm run preview
 
 - 前端默认端口：`4029`，Vite 开发和预览服务均绑定 `0.0.0.0:4029`。
 - 本机访问：`http://127.0.0.1:4029/`。
-- FRP 外网访问：`http://47.120.48.245:14000/`。
+- FRP 外网访问：`http://47.120.48.245:14029/`。
 - 浏览器本地数据库：使用 IndexedDB，Dexie 数据库名为 `railway-signal-runner`，对象仓库包含 `scenes` 和 `records`。
 - 可选 PostgreSQL 初始化脚本：`scripts/init-postgres.mjs`。
 - 可选 PostgreSQL 数据库名称：`railway_signal_runner`。

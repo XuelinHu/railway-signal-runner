@@ -10,7 +10,7 @@
 
 - Default port: `4029`.
 - Local URL: `http://127.0.0.1:4029/`.
-- FRP URL: `http://47.120.48.245:14000/`.
+- FRP URL: `http://47.120.48.245:14029/`.
 - Dev: `npm run dev`.
 - Build: `npm run build`.
 - Preview: `npm run preview`.
