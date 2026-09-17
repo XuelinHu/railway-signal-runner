@@ -65,6 +65,10 @@
           <button v-if="isTeacher" class="icon-button" type="button" title="加载场景" @click="fileInputRef?.click()">
             <Upload :size="19" />
           </button>
+          <button class="tool-button agent" type="button" title="智能体问答" @click="openAgent">
+            <Bot :size="18" />
+            <span>助手</span>
+          </button>
           <button class="icon-button" type="button" :title="mapVisible ? '隐藏地图' : '显示地图'" @click="mapVisible = !mapVisible">
             <MapPinned v-if="mapVisible" :size="19" />
             <Map v-else :size="19" />
@@ -366,6 +370,7 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import {
   Box,
+  Bot,
   CheckCircle2,
   ChevronDown,
   ChevronLeft,
@@ -394,6 +399,7 @@ import {
 } from '@lucide/vue'
 import CesiumMiniMap from './CesiumMiniMap.vue'
 import ModelThumbnail from './ModelThumbnail.vue'
+import { useAgentStore } from '../stores/agent'
 import { MODEL_CATALOG, MODEL_CATEGORIES } from '../game/modelCatalog'
 import { parseTrainingScene, serializeTrainingScene } from '../game/sceneSerializer'
 import { getTrainingScene, saveTrainingScene } from '../game/trainingSceneDb'
@@ -414,6 +420,7 @@ const props = defineProps({
   }
 })
 
+const agent = useAgentStore()
 const canvasRef = ref(null)
 const stageRef = ref(null)
 const fileInputRef = ref(null)
@@ -471,6 +478,23 @@ const categorizedCatalog = computed(() => MODEL_CATEGORIES
 
 const selectedObject = computed(() => sceneObjects.value.find((object) => object.id === selectedObjectId.value))
 const isTeacher = computed(() => props.role === 'teacher')
+
+/**
+ * 唤起智能体，并把当前训练状态作为上下文带进去。
+ * 这样学生问「我现在到哪了」时，模型知道他在哪个场景、走到第几个信号机。
+ */
+function openAgent() {
+  agent.sceneContext = [
+    `当前处于第一人称铁道信号巡检训练场景（${editorMode.value ? '场景布置模式' : '巡检训练模式'}）。`,
+    `进度：已检查 ${gameState.value.inspected}/${gameState.value.total} 个信号机。`,
+    `位置：经度 ${gameState.value.geo.lon.toFixed(5)}，纬度 ${gameState.value.geo.lat.toFixed(5)}。`,
+    `最近信号机：${gameState.value.nearestLabel}，距离 ${Math.round(gameState.value.nearestDistance)} 米。`,
+    gameState.value.completed ? '本次训练已完成。' : '',
+  ]
+    .filter(Boolean)
+    .join('')
+  agent.toggle(true)
+}
 
 const completionRatio = computed(() => {
   if (!gameState.value.total) return 0
