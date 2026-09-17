@@ -8,14 +8,24 @@
   "scripts": {
     "dev": "vite --host 0.0.0.0 --port 4029",
     "build": "vite build",
-    "preview": "vite preview --host 0.0.0.0 --port 4029"
+    "preview": "vite preview --host 0.0.0.0 --port 4029",
+    "api": "node server/src/server.js",
+    "api:dev": "node --watch server/src/server.js",
+    "db:init": "node scripts/init-postgres.mjs",
+    "seed:admin": "node scripts/seed-admin.mjs",
+    "seed:demo": "node scripts/seed-demo-data.mjs"
   },
   "dependencies": {
     "@lucide/vue": "^1.17.0",
     "@vueuse/core": "^14.3.0",
+    "bcryptjs": "^3.0.3",
     "cannon-es": "^0.20.0",
     "cesium": "^1.137.0",
+    "cors": "^2.8.6",
     "dexie": "^4.4.4",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
     "nanoid": "^5.1.14",
     "pg": "^8.22.0",
     "pinia": "^3.0.4",

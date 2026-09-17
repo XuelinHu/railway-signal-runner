@@ -1,6 +1,12 @@
+import { readFile } from 'node:fs/promises'
+import { dirname, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import pg from 'pg'
 
 const { Client } = pg
+
+const here = dirname(fileURLToPath(import.meta.url))
+const schemaFile = resolve(here, '../server/src/db/schema.sql')
 
 const config = {
   host: process.env.PGHOST || '127.0.0.1',
@@ -32,25 +38,18 @@ await admin.end()
 const app = new Client({ ...config, database: targetDatabase })
 await app.connect()
 
-await app.query(`
-  CREATE TABLE IF NOT EXISTS training_scenes (
-    id TEXT PRIMARY KEY,
-    name TEXT NOT NULL,
-    payload JSONB NOT NULL,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
-  );
+// schema.sql 全部语句幂等，可重复执行；已有的 training_scenes / training_records 走 ALTER 原地扩展。
+const schema = await readFile(schemaFile, 'utf8')
+await app.query(schema)
+console.log(`applied schema from ${schemaFile}`)
 
-  CREATE TABLE IF NOT EXISTS training_records (
-    id TEXT PRIMARY KEY,
-    scene_id TEXT REFERENCES training_scenes(id) ON DELETE SET NULL,
-    student_name TEXT,
-    score INTEGER,
-    elapsed_seconds INTEGER,
-    payload JSONB NOT NULL,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
-  );
+const { rows } = await app.query(`
+  SELECT table_name
+  FROM information_schema.tables
+  WHERE table_schema = 'public'
+  ORDER BY table_name
 `)
+console.log(`tables in ${targetDatabase}: ${rows.map((row) => row.table_name).join(', ')}`)
 
 await app.end()
 console.log(`initialized schema in ${targetDatabase}`)
