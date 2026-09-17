@@ -11,12 +11,17 @@ PASS=0
 FAIL=0
 STAMP="$(date +%s)"
 STUDENT="stu${STAMP}"
-# 每轮用独立的管理员账号。登录接口按账号限流（10 次 / 15 分钟），
-# 若反复用内置 admin 账号跑测试，几轮之后桶就满了，之后全是 429。
-ADMIN_USER="smokeadm${STAMP}"
-# 密码每轮随机，不写字面量：本仓库是公开的，而 API 端口经 FRP 映射到公网，
-# 硬编码的管理员密码等于把后台账号公开出去。脚本结束时会删掉自己建的账号
-# （见 cleanup），这一行是那道防线万一漏掉时的第二道。
+# 管理员账号固定复用同一个，不每轮新建。原因有两条：
+#
+# 1. 不能删。管理台明令禁止管理员删除/禁用/降级自己（防止把自己锁在系统外），
+#    所以"每轮新建一个管理员、跑完删掉"这条路由不通，只会在库里越堆越多。
+#    真正的 admin 账号又不能拿来跑测试——登录接口按账号限流（10 次 / 15 分钟），
+#    几轮下来桶就满了，之后全是 429。
+# 2. 密码每轮重置（下面 seed-admin 带 --password 会覆盖已有账号的密码），
+#    所以仓库里不存任何可用凭据，而这个账号只在测试运行期间可登录。
+#
+# 代价：库里长期留一个 smokeadmin 管理员账号。要清掉它，用 admin 登录管理台删除即可。
+ADMIN_USER="smokeadmin"
 ADMIN_PASS="Smoke${RANDOM}${RANDOM}aA1"
 
 # 每次运行伪装成一个不同的客户端 IP，以免上一轮跑出的限流计数把下一轮挡掉。
@@ -51,18 +56,19 @@ except Exception:
 post() { curl -s -X POST "$BASE$1" -H 'Content-Type: application/json' -H "X-Forwarded-For: $FAKE_IP" -d "$2" ${3:+-H "Authorization: Bearer $3"}; }
 get()  { curl -s "$BASE$1" -H "X-Forwarded-For: $FAKE_IP" ${2:+-H "Authorization: Bearer $2"}; }
 
-# 删除本轮自建的账号。
+# 删除本轮自建的学生账号。
 #
-# 为什么必须清：管理员账号是每轮新建的（为了绕开登录限流），不清就会在库里
-# 越堆越多，而 8038 经 FRP 映射到公网 47.120.48.245:18038——一堆没人管的
-# 管理员账号等于一排后门。挂在 trap 上，中途断言失败也会执行。
+# 为什么必须清：每轮都新建 stu/lock 账号，不清就会在库里越堆越多，而 8038
+# 经 FRP 映射到公网 47.120.48.245:18038。挂在 trap 上，中途断言失败也会执行。
+#
+# 管理员账号不在这里 —— 见 ADMIN_USER 处的说明，管理员删不掉自己。
 #
 # 走的是 DELETE /api/admin/users/:id，即软删（deleted_at + status=disabled）；
 # 登录查询一律带 `deleted_at IS NULL`，所以软删之后账号无法再登录。
 cleanup() {
   [ -n "${ATOKEN:-}" ] || return 0
   local name id
-  for name in "${STUDENT:-}" "${ADMIN_USER:-}" "${LOCKUSER:-}"; do
+  for name in "${STUDENT:-}" "${LOCKUSER:-}"; do
     [ -n "$name" ] || continue
     id="$(get "/api/admin/users?q=$name&pageSize=5" "$ATOKEN" | python3 -c "
 import sys, json
@@ -88,7 +94,13 @@ expect "Ollama 连通" "$HEALTH" "ollama.ok" "True"
 
 say "2. 准备测试管理员"
 SEED_OUT="$(node scripts/seed-admin.mjs --username "$ADMIN_USER" --password "$ADMIN_PASS" 2>&1)"
-if printf '%s' "$SEED_OUT" | grep -q "已创建"; then ok "管理员 $ADMIN_USER 已创建"; else bad "管理员创建失败：$SEED_OUT"; fi
+# 账号是复用的，所以首次跑是"已创建"，之后是"密码已按参数重置"——两种都算成功，
+# 关键是本轮密码确实被设成了 $ADMIN_PASS。
+if printf '%s' "$SEED_OUT" | grep -qE "管理员账号已创建|密码已按参数重置"; then
+  ok "管理员 $ADMIN_USER 就绪（密码本轮随机）"
+else
+  bad "管理员准备失败：$SEED_OUT"
+fi
 
 say "3. 注册"
 REG="$(post /api/auth/register "{\"username\":\"$STUDENT\",\"password\":\"Passw0rd123\",\"displayName\":\"测试学生\"}")"
