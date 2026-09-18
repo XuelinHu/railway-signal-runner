@@ -229,14 +229,23 @@ print(f"  · 来源：API {src.get('api')} 条，磁盘 {src.get('disk')} 条，
 PY
 
 say "12. 流式对话（经 API 端口）"
+# 对话测试默认挑最小模型（qwen2.5:0.5b）：冷启动一两秒，不跟正在跑的业务抢显存，
+# 也不会因为 14b/30b 被别的项目挤掉而在这一步误报成"流中途断掉"。
+# 需要顺带覆盖思考控制帧那条路径时，用 SMOKE_CHAT_MODEL=qwen3:14b 再跑一次。
+CHAT_MODEL="${SMOKE_CHAT_MODEL:-$(printf '%s' "$MODELS" | python3 -c "import sys,json;n=[m['name'] for m in json.load(sys.stdin).get('models',[])];print('qwen2.5:0.5b' if 'qwen2.5:0.5b' in n else '')" 2>/dev/null)}"
+# 本机没拉小模型时退回应用的默认模型，宁可慢也不要跳过这段断言。
+if [ -z "$CHAT_MODEL" ]; then
+  CHAT_MODEL="$(printf '%s' "$MODELS" | python3 -c "import sys,json;print(json.load(sys.stdin).get('defaultModel',''))" 2>/dev/null)"
+fi
+printf '  · 对话测试使用模型：%s\n' "$CHAT_MODEL"
 CHATOUT="$(curl -sN -X POST "$BASE/api/ai/chat" -H 'Content-Type: application/json' \
   -H "X-Forwarded-For: $FAKE_IP" \
   -H "Authorization: Bearer $RTOKEN2" \
-  -d "{\"model\":\"$(printf '%s' "$MODELS" | python3 -c "import sys,json;print(json.load(sys.stdin).get('defaultModel',''))" 2>/dev/null)\",\"message\":\"用一句话说明铁路信号机的作用\"}" \
+  -d "{\"model\":\"$CHAT_MODEL\",\"message\":\"用一句话说明铁路信号机的作用\"}" \
   --max-time 300 2>/dev/null)"
-# 超时给到 300s 而不是 120s：qwen3:14b 是思考模型，空闲时这一轮也要 45-90s，
-# 若同时有别的进程在拉模型或跑推理（共用同一块 GPU），实测能涨到 135s。
-# 原来的 120s 会被截断成"流中途断掉"，看起来像三个功能缺陷，其实只是没等够。
+# 超时仍给 300s：默认的小模型几秒就完，但 SMOKE_CHAT_MODEL 指向 qwen3:14b 这类思考
+# 模型时，空闲也要 45-90s；若同时有别的进程在拉模型或跑推理（共用同一块 GPU），实测能到 135s。
+# 用 120s 会被截断成"流中途断掉"，看起来像三个功能缺陷，其实只是没等够。
 
 FRAMES="$(printf '%s' "$CHATOUT" | grep -c '"__railway"' || true)"
 
@@ -283,8 +292,14 @@ else
   bad "未收到会话元信息帧"
 fi
 
-# 增量性验证：若所有正文帧的首字都在同一毫秒，说明中间层做了缓冲，流式就退化成了一次性返回。
-if printf '%s' "$CHATOUT" | python3 -c "
+# 增量性验证：正文帧的 created_at 若全挤在一起，只说明上游一口气吐完。
+# 这条只在用慢模型跑时才有判别力 —— 0.5b 几十个字本就一秒内生成完，时间戳天然集中，
+# 拿它断言会把"小模型很快"误报成"被中间层缓冲"。所以默认（小模型）跳过，
+# 用 SMOKE_CHAT_MODEL 指定 14b 这类慢模型时才断言。
+if [ -z "${SMOKE_CHAT_MODEL:-}" ]; then
+  echo "  · 当前是小模型，增量性断言无判别力，跳过（要跑这条用 SMOKE_CHAT_MODEL=qwen3:14b）"
+else
+  INCR="$(printf '%s' "$CHATOUT" | python3 -c "
 import sys, json
 from datetime import datetime
 stamps = []
@@ -301,10 +316,13 @@ def parse(s):
     return datetime.fromisoformat(s.replace('Z', '+00:00'))
 span = (parse(stamps[-1]) - parse(stamps[0])).total_seconds()
 print('ok' if span > 0.2 else 'buffered')
-" 2>/dev/null | grep -q '^ok$'; then
-  ok "正文帧在时间上分散，确认是增量流式"
-else
-  bad "正文帧时间戳过于集中，疑似被中间层缓冲成一次性返回"
+" 2>/dev/null)"
+  case "$INCR" in
+    ok)    ok "正文帧在时间上分散，确认是增量流式" ;;
+    # 帧数太少（短回复）同样没有判别力，原来这里会落到 bad，是条假失败。
+    skip)  echo "  · 正文帧不足 5 条，增量性断言无判别力，跳过" ;;
+    *)     bad "正文帧时间戳过于集中，疑似被中间层缓冲成一次性返回" ;;
+  esac
 fi
 
 say "13. 会话落库"

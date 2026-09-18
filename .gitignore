@@ -7,3 +7,5 @@ dist
 .playwright-mcp/
 .serena/
 public/assets/models/*.glb
+# 本地 Claude Code 配置（.claude/ 下还有 116M 的 git worktree）
+.claude/
