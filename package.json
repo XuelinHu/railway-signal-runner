@@ -7,6 +7,7 @@
   "description": "A Vue, CesiumJS and Three.js first-person railway signal inspection mini-game.",
   "scripts": {
     "dev": "vite --host 0.0.0.0 --port 4029",
+    "dev:https": "node scripts/start-web-https.mjs",
     "build": "vite build",
     "preview": "vite preview --host 0.0.0.0 --port 4029",
     "api": "node --env-file-if-exists=server/.env scripts/start-api.mjs",

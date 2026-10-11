@@ -8,6 +8,15 @@ import cesium from 'vite-plugin-cesium'
 // 不要改成 8037，那个端口被相邻项目 railway_sign 的 API 占用。
 const API_PORT = process.env.API_PORT || 8038
 const API_TARGET = process.env.VITE_API_TARGET || `http://127.0.0.1:${API_PORT}`
+const useHttps = process.env.DEV_HTTPS === '1'
+const httpsPort = 4092
+const tlsDirectory = resolve(process.cwd(), '../identity-service/tls/apps/railway-signal-runner')
+const tlsCert = resolve(tlsDirectory, 'server.crt')
+const tlsKey = resolve(tlsDirectory, 'server.key')
+
+if (useHttps && !(existsSync(tlsCert) && existsSync(tlsKey))) {
+  throw new Error(`HTTPS requires the LAN development certificate in ${tlsDirectory}`)
+}
 
 /**
  * /api 代理。两处关键点：
@@ -47,14 +56,16 @@ export default defineConfig({
   plugins: [vue(), cesium(), preserveReleaseApk],
   server: {
     host: '0.0.0.0',
-    port: 4029,
+    port: useHttps ? httpsPort : 4029,
     strictPort: true,
+    ...(useHttps ? { https: { cert: tlsCert, key: tlsKey } } : {}),
     proxy: apiProxy,
   },
   preview: {
     host: '0.0.0.0',
-    port: 4029,
+    port: useHttps ? httpsPort : 4029,
     strictPort: true,
+    ...(useHttps ? { https: { cert: tlsCert, key: tlsKey } } : {}),
     proxy: apiProxy,
   },
   build: {

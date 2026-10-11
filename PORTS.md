@@ -1,6 +1,6 @@
 # 启动端口
 
-- 前端/网页入口：4029。
+- 前端/网页入口：4029（本机 HTTP）；LAN HTTPS：4092。
 - 后端/API：8038。
 
 前端入口统一采用 40xx，后端服务统一采用 80xx。开发与生产预览为同一项目的替代启动方式，不应同时占用同一端口。端口被占用时启动失败，不自动改用相邻项目的端口。实际 `.env` 中的端口需与示例一致；密钥配置不提交到仓库。
@@ -16,3 +16,5 @@ npm run dev
 ```powershell
 npm run api
 ```
+
+LAN HTTPS 前端：`npm run dev:https`。访问前需在客户端信任项目 CA `identity-service/tls/front-dev-ca.crt`。
