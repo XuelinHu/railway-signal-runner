@@ -83,7 +83,7 @@ export const config = {
   },
 
   ollama: {
-    baseUrl: str('OLLAMA_BASE_URL', 'http://127.0.0.1:11434').replace(/\/+$/, ''),
+    baseUrl: str('OLLAMA_BASE_URL', 'http://192.168.1.9:11434').replace(/\/+$/, ''),
     requestTimeoutMs: num('OLLAMA_TIMEOUT_MS', 120_000),
     keepAlive: str('OLLAMA_KEEP_ALIVE', '5m'),
     modelCacheTtlMs: num('OLLAMA_MODEL_CACHE_TTL_MS', 30_000),

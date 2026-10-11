@@ -111,7 +111,7 @@ npm run db:restore -- --source backups/runner-snapshot.pgbak --database railway_
 
 ### 模型服务（Ollama）
 
-- `OLLAMA_BASE_URL=http://127.0.0.1:11434`。
+- `OLLAMA_BASE_URL=http://192.168.1.9:11434`（局域网 Ollama；模型请求仅在用户主动发起时执行）。
 - 模型清单优先取 `GET /api/tags`（权威），失败时回退到扫描 manifests 目录并标注来源。
 - 本机 `OLLAMA_MODELS` 未设置，Ollama 以 `ollama` 系统用户运行，实际目录是 `/usr/share/ollama/.ollama/models`；可用 `OLLAMA_MODELS_DIRS` 显式覆盖扫描路径。
 <!-- codex-runtime-config:end -->
