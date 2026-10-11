@@ -4,7 +4,7 @@
 
 - Project: `railway-signal-runner`
 - Stack: Vue 3, Vite, CesiumJS, Three.js, Cannon, Dexie, Pinia
-- Backend: Node + Express 5 (ESM), PostgreSQL 16, Ollama
+- Backend: Node + Express 5 (ESM), PostgreSQL 18, Ollama
 - Type: first-person railway signal inspection/training platform
 
 ## Runtime
