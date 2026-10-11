@@ -12,6 +12,9 @@
     "api": "node server/src/server.js",
     "api:dev": "node --watch server/src/server.js",
     "db:init": "node scripts/init-postgres.mjs",
+    "db:backup": "node --env-file-if-exists=server/.env scripts/pg-backup.mjs backup",
+    "db:restore": "node --env-file-if-exists=server/.env scripts/pg-backup.mjs restore",
+    "test:db:backup": "node --env-file-if-exists=server/.env scripts/pg-backup-smoke.mjs",
     "test": "node --test",
     "seed:admin": "node scripts/seed-admin.mjs",
     "seed:demo": "node scripts/seed-demo-data.mjs"

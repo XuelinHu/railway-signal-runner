@@ -91,9 +91,23 @@ npm run api                                            # 后端 8038（api:dev �
 ### PostgreSQL
 
 - 已真实接入运行时，API 直接读写；数据库名 `railway_signal_runner`，初始化脚本 `scripts/init-postgres.mjs`。
-- 连接变量：`PGHOST=127.0.0.1`、`PGPORT=5432`、`PGUSER=deipss`、`PGPASSWORD=<your-postgres-password>`、`PGDATABASE=railway_signal_runner`。
+- 连接变量：`PGHOST=192.168.1.9`、`PGPORT=5433`、`PGUSER=deipss`、`PGPASSWORD=<your-postgres-password>`、`PGDATABASE=railway_signal_runner`。
 - 表：`users`、`refresh_tokens`、`password_reset_tokens`、`login_logs`、`ai_conversations`、`ai_messages`、`ai_request_logs`、`system_settings`、`audit_logs`，以及扩展后的 `training_scenes`、`training_records`。
 - 配置模板见 `server/env.example`，复制为 `server/.env` 后填写；`server/.env` 已被 `.gitignore` 忽略，**切勿提交**。
+
+备份使用 `pg_dump` custom 格式和 AES-256-GCM 加密。先在 `server/.env` 设置独立的 32 字节随机密钥 `DB_BACKUP_ENCRYPTION_KEY`（64 位十六进制）；默认快照存入 Git 忽略的 `backups/` 目录：
+
+```bash
+npm run db:backup
+```
+
+恢复需要一个已创建、与源库不同且以 `_test` 结尾的目标数据库，并必须显式传入 `--replace`。恢复前会先验证快照认证标签，再由 `pg_restore` 在单事务中替换目标对象：
+
+```bash
+npm run db:restore -- --source backups/runner-snapshot.pgbak --database railway_signal_runner_restore_test --replace
+```
+
+`npm run test:db:backup` 会从当前 `PGDATABASE` 备份，并创建唯一隔离恢复库；请先将 `PGDATABASE` 指向 `_test` 数据库。恢复测试库保留供复核。
 
 ### 模型服务（Ollama）
 
