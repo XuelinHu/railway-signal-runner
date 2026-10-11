@@ -63,6 +63,9 @@ export const config = {
   auth: {
     jwtSecret: str('JWT_SECRET', ''),
     jwtIssuer: str('JWT_ISSUER', 'railway-signal-runner'),
+    oidcIssuer: str('OIDC_ISSUER', ''),
+    oidcClientId: str('OIDC_CLIENT_ID', ''),
+    oidcRedirectOrigins: list('OIDC_REDIRECT_ORIGINS'),
     accessTtlSeconds: num('JWT_ACCESS_TTL', 2 * 60 * 60), // 2 小时
     refreshTtlSeconds: num('JWT_REFRESH_TTL', 30 * 24 * 60 * 60), // 30 天
     resetTtlSeconds: num('PASSWORD_RESET_TTL', 30 * 60), // 30 分钟

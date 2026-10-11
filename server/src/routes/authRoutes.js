@@ -7,8 +7,61 @@ import { getClientIp, rateLimit } from '../middleware/rateLimit.js'
 import * as authService from '../services/authService.js'
 import { rotateRefreshToken, signAccessToken } from '../services/tokenService.js'
 import { toPublicUser } from '../services/authService.js'
+import { pool } from '../db/pool.js'
+import { insertAuditLog } from '../repositories/logRepository.js'
+import * as users from '../repositories/userRepository.js'
+import { exchangeOidcCode, oidcEnabled, startOidc, takeOidcTransaction } from '../services/oidcService.js'
 
 export const authRouter = Router()
+
+authRouter.get('/oidc/config', (_req, res) => res.json({ enabled: oidcEnabled() }))
+
+authRouter.post('/oidc/start', (req, res, next) => {
+  const mode = req.body?.mode === 'link' ? 'link' : 'login'
+  const start = async () => {
+    try {
+      const result = await startOidc({ mode, userId: mode === 'link' ? req.user.id : null, redirectUri: String(req.body?.redirectUri || '') })
+      res.cookie('rsr_oidc', result.cookieKey, { httpOnly: true, sameSite: 'lax', secure: req.secure, path: '/api/auth/oidc', maxAge: 600_000 })
+      res.json({ authorizationUrl: result.authorizationUrl })
+    } catch (error) { next(error) }
+  }
+  if (mode === 'link') return requireAuth(req, res, start)
+  return start()
+})
+
+authRouter.post('/oidc/callback', async (req, res, next) => {
+  const transaction = takeOidcTransaction(req.cookies?.rsr_oidc, String(req.body?.state || ''))
+  res.clearCookie('rsr_oidc', { httpOnly: true, sameSite: 'lax', secure: req.secure, path: '/api/auth/oidc' })
+  if (!transaction) return next(Object.assign(new Error('统一登录状态已过期，请重新开始'), { status: 401, code: 'oidc_state_invalid' }))
+  const complete = async () => {
+    try {
+      if (transaction.mode === 'link' && String(req.user?.id) !== String(transaction.userId)) {
+        return next(Object.assign(new Error('绑定账号的登录状态已失效，请重新登录后重试'), { status: 401, code: 'oidc_link_session_mismatch' }))
+      }
+      const subject = await exchangeOidcCode(transaction, String(req.body?.code || ''))
+      if (transaction.mode === 'link') {
+        const linked = await users.bindOidcSubject(transaction.userId, subject)
+        if (!linked) return next(Object.assign(new Error('本地账号不存在、已停用或已关联其他统一身份'), { status: 409, code: 'oidc_link_conflict' }))
+        await insertAuditLog({ userId: linked.id, username: linked.username, action: 'auth.oidc.link', targetType: 'user', targetId: linked.id, ip: getClientIp(req) })
+        return res.json({ mode: 'link', linked: true })
+      }
+      const session = await authService.loginWithOidcSubject(subject, ctx(req))
+      return res.json({ mode: 'login', ...session })
+    } catch (error) {
+      if (error?.code === '23505') error.status = 409
+      next(error)
+    }
+  }
+  if (transaction.mode === 'link') return requireAuth(req, res, complete)
+  return complete()
+})
+
+authRouter.get('/oidc/status', requireAuth, async (req, res, next) => {
+  try {
+    const result = await pool.query('SELECT oidc_subject IS NOT NULL AS linked FROM users WHERE id = $1', [req.user.id])
+    res.json({ enabled: oidcEnabled(), linked: Boolean(result.rows[0]?.linked) })
+  } catch (error) { next(error) }
+})
 
 const ctx = (req) => ({
   ip: getClientIp(req),

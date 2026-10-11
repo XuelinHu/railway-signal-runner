@@ -13,6 +13,20 @@ export function findById(id) {
   return queryOne(`SELECT ${PUBLIC_COLUMNS} FROM users WHERE id = $1`, [id])
 }
 
+export function findByOidcSubject(subject) {
+  return queryOne(`SELECT ${PUBLIC_COLUMNS} FROM users WHERE oidc_subject = $1 AND status = 'active' AND deleted_at IS NULL`, [subject])
+}
+
+export function bindOidcSubject(id, subject) {
+  return queryOne(
+    `UPDATE users SET oidc_subject = $2, updated_at = now()
+      WHERE id = $1 AND status = 'active' AND deleted_at IS NULL
+        AND (oidc_subject IS NULL OR oidc_subject = $2)
+      RETURNING ${PUBLIC_COLUMNS}`,
+    [id, subject]
+  )
+}
+
 /** 登录用：需要带出 password_hash 做校验。 */
 export function findByUsernameWithSecret(username) {
   return queryOne(

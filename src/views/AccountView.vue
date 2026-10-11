@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { userApi } from '../api/users'
+import { authApi } from '../api/auth'
 import PaginationBar from '../components/admin/PaginationBar.vue'
 
 const auth = useAuthStore()
@@ -34,6 +35,28 @@ const passwordOk = computed(() => passwordChecks.value.every((item) => item.ok))
 
 const conversations = ref({ items: [], page: 1, pageSize: 10, total: 0, totalPages: 1 })
 const loadingConversations = ref(false)
+const oidcEnabled = ref(false)
+const oidcLinked = ref(false)
+const oidcBusy = ref(false)
+
+async function loadOidcStatus() {
+  try {
+    const status = await authApi.oidcStatus()
+    oidcEnabled.value = Boolean(status.enabled)
+    oidcLinked.value = Boolean(status.linked)
+  } catch { oidcEnabled.value = false; oidcLinked.value = false }
+}
+
+async function linkOidc() {
+  oidcBusy.value = true
+  try {
+    const result = await authApi.oidcStart('link', `${window.location.origin}/`)
+    window.location.assign(result.authorizationUrl)
+  } catch (error) {
+    profileError.value = error?.message || '统一账号绑定失败'
+    oidcBusy.value = false
+  }
+}
 
 async function loadConversations(page = 1) {
   loadingConversations.value = true
@@ -53,7 +76,7 @@ async function loadConversations(page = 1) {
   }
 }
 
-onMounted(() => loadConversations(1))
+onMounted(() => { loadConversations(1); loadOidcStatus() })
 
 async function saveProfile() {
   savingProfile.value = true
@@ -175,6 +198,14 @@ function formatTime(value) {
         </form>
       </section>
     </div>
+
+    <section class="panel">
+      <h2>统一账号</h2>
+      <p class="panel-hint">{{ oidcLinked ? '已绑定统一身份。' : '绑定后可使用共享账号登录；不会按用户名或邮箱自动合并账号。' }}</p>
+      <button v-if="oidcEnabled && !oidcLinked" class="btn-primary" type="button" :disabled="oidcBusy" @click="linkOidc">
+        {{ oidcBusy ? '正在跳转…' : '绑定统一账号' }}
+      </button>
+    </section>
 
     <section class="panel">
       <h2>我的智能体会话</h2>

@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../../stores/auth'
+import { authApi } from '../../api/auth'
 import AuthLayout from './AuthLayout.vue'
 
 const auth = useAuthStore()
@@ -12,6 +13,8 @@ const username = ref('')
 const password = ref('')
 const error = ref('')
 const submitting = ref(false)
+const oidcLoading = ref(false)
+const oidcEnabled = ref(false)
 
 // 登录成功后回到被拦截的页面；redirect 由路由守卫写入。
 const redirect = computed(() => (typeof route.query.redirect === 'string' ? route.query.redirect : '/'))
@@ -20,6 +23,12 @@ const justReset = computed(() => route.query.reset === '1')
 
 onMounted(() => {
   if (auth.isAuthenticated) router.replace(redirect.value)
+  authApi.oidcConfig().then((value) => { oidcEnabled.value = Boolean(value.enabled) }).catch(() => {})
+  const oidcError = sessionStorage.getItem('rsr.oidcError')
+  if (oidcError) {
+    sessionStorage.removeItem('rsr.oidcError')
+    error.value = oidcError
+  }
 })
 
 async function submit() {
@@ -33,6 +42,17 @@ async function submit() {
     error.value = err?.message || '登录失败，请稍后重试'
   } finally {
     submitting.value = false
+  }
+}
+
+async function signInWithOidc() {
+  oidcLoading.value = true
+  try {
+    const result = await authApi.oidcStart('login', `${window.location.origin}/`)
+    window.location.assign(result.authorizationUrl)
+  } catch (err) {
+    error.value = err?.message || '统一登录暂不可用'
+    oidcLoading.value = false
   }
 }
 </script>
@@ -63,6 +83,9 @@ async function submit() {
 
       <button class="btn-primary" type="submit" :disabled="submitting">
         {{ submitting ? '登录中…' : '登录' }}
+      </button>
+      <button v-if="oidcEnabled" class="btn-ghost" type="button" :disabled="oidcLoading" @click="signInWithOidc">
+        {{ oidcLoading ? '正在跳转…' : '使用统一账号登录' }}
       </button>
     </form>
 

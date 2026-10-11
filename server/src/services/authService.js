@@ -165,6 +165,20 @@ export async function login({ username, password }, ctx) {
   }
 }
 
+export async function loginWithOidcSubject(subject, ctx) {
+  const user = await users.findByOidcSubject(subject)
+  if (!user) throw unauthorized('该统一身份尚未绑定有效的巡检实训平台账号，请先用本地账号登录并绑定', 'oidc_account_not_linked')
+  await users.recordLoginSuccess(user.id, ctx?.ip)
+  await insertLoginLog({ userId: user.id, usernameInput: user.username, success: true, ip: ctx?.ip, userAgent: ctx?.userAgent })
+  const refresh = await issueRefreshToken(user.id, { ip: ctx?.ip, userAgent: ctx?.userAgent })
+  return {
+    user: toPublicUser({ ...user, last_login_at: new Date() }),
+    accessToken: signAccessToken(user),
+    refreshToken: refresh.raw,
+    expiresIn: config.auth.accessTtlSeconds,
+  }
+}
+
 /** 刷新令牌换发时按 userId 重新加载用户，保证角色/状态变更即时生效。 */
 export async function loadUserForToken(userId) {
   const user = await users.findById(userId)

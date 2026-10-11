@@ -7,6 +7,10 @@ export const authApi = {
   login: (payload) => http.post('/auth/login', payload, publicOptions),
   logout: (payload = {}) => http.post('/auth/logout', payload),
   me: () => http.get('/auth/me'),
+  oidcConfig: () => http.get('/auth/oidc/config', publicOptions),
+  oidcStart: (mode, redirectUri) => http.post('/auth/oidc/start', { mode, redirectUri }),
+  oidcCallback: (payload) => http.post('/auth/oidc/callback', payload),
+  oidcStatus: () => http.get('/auth/oidc/status'),
   forgotPassword: (account) => http.post('/auth/forgot-password', { account }, publicOptions),
   /** 预检重置链接是否还有效，用于渲染表单前先给提示。 */
   peekReset: (token) => http.get(`/auth/reset-password/${encodeURIComponent(token)}`, publicOptions),
