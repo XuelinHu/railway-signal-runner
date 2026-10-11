@@ -77,10 +77,19 @@ RUN_POSTGRES_INTEGRATION=1 node --env-file=server/.env --test test/postgres-api.
 ```bash
 npm install
 npm run db:init                                        # 幂等建表
-npm run seed:admin -- --username admin --password '<强密码>'
 npm run seed:demo                                      # 造分页验证用的演示数据（demo- 前缀，可 --clean）
 npm run dev                                            # 前端 4029
 npm run api                                            # 后端 8038（api:dev 为 node --watch）
+```
+
+PowerShell 下可交互输入管理员密码，避免把明文放进命令参数：
+
+```powershell
+Read-Host '管理员密码' -AsSecureString | ForEach-Object {
+  $p = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($_)
+  try { [Runtime.InteropServices.Marshal]::PtrToStringBSTR($p) }
+  finally { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($p) }
+} | node --env-file-if-exists=server/.env scripts/seed-admin.mjs --username admin --password-stdin
 ```
 
 ### 浏览器本地数据库

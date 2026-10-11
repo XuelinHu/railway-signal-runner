@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { spawn } from 'node:child_process'
+import { spawn, spawnSync } from 'node:child_process'
 import { once } from 'node:events'
 import { createServer } from 'node:http'
 import { createServer as createNetServer } from 'node:net'
@@ -68,6 +68,29 @@ test('PostgreSQL API authentication, paging, and AI persistence', {
   const health = await getJson(`${baseUrl}/api/health`)
   assert.equal(health.body.database.ok, true)
   assert.equal(health.body.ollama.ok, true)
+
+  const adminPassword = `Admin${Date.now()}_TestA9`
+  const adminSeed = spawnSync(process.execPath, [
+    '--env-file-if-exists=server/.env',
+    'scripts/seed-admin.mjs',
+    '--username', `adminit${Date.now()}`,
+    '--password-stdin',
+  ], {
+    cwd: process.cwd(),
+    env: process.env,
+    input: `${adminPassword}\n`,
+    encoding: 'utf8',
+  })
+  assert.equal(adminSeed.status, 0, adminSeed.stderr)
+  assert.doesNotMatch(adminSeed.stdout, new RegExp(adminPassword))
+  const adminUsername = adminSeed.stdout.match(/用户名：(.+)/)?.[1]
+  assert.ok(adminUsername)
+  const adminLogin = await postJson(`${baseUrl}/api/auth/login`, {
+    username: adminUsername,
+    password: adminPassword,
+  })
+  assert.equal(adminLogin.status, 200)
+  assert.equal(adminLogin.body.user.role, 'admin')
 
   const suffix = `${Date.now()}${Math.floor(Math.random() * 1000)}`
   const username = `it${suffix}`
