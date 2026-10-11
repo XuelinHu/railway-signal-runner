@@ -12,7 +12,21 @@ export function notFoundHandler(req, res) {
 // eslint-disable-next-line no-unused-vars -- Express 靠四参数签名识别错误处理中间件
 export function errorHandler(error, req, res, next) {
   const isHttpError = error instanceof HttpError
-  const status = isHttpError ? error.status : 500
+  const isRequestError =
+    typeof error?.type === 'string' && Number.isInteger(error.status) && error.status >= 400 && error.status < 500
+  const status = isHttpError || isRequestError ? error.status : 500
+  const requestErrorCode =
+    error?.type === 'entity.too.large'
+      ? 'payload_too_large'
+      : error?.type === 'entity.parse.failed'
+        ? 'invalid_json'
+        : 'invalid_request'
+  const requestErrorMessage =
+    error?.type === 'entity.too.large'
+      ? '请求体超过允许大小'
+      : error?.type === 'entity.parse.failed'
+        ? 'JSON 格式不正确'
+        : '请求格式不受支持'
 
   // 流式响应已经开始就无法再改状态码，只能把错误塞成一帧控制帧。
   if (res.headersSent) {
@@ -26,11 +40,13 @@ export function errorHandler(error, req, res, next) {
       )
       res.end()
     }
-    if (!isHttpError) logger.error('流式响应中的未捕获错误', { message: error.message, stack: error.stack })
+    if (!isHttpError && !isRequestError) {
+      logger.error('流式响应中的未捕获错误', { message: error.message, stack: error.stack })
+    }
     return
   }
 
-  if (!isHttpError) {
+  if (!isHttpError && !isRequestError) {
     logger.error('未捕获的服务端错误', {
       message: error.message,
       stack: error.stack,
@@ -41,8 +57,8 @@ export function errorHandler(error, req, res, next) {
 
   res.status(status).json({
     ok: false,
-    code: isHttpError ? error.code : 'internal_error',
-    message: isHttpError ? error.message : '服务内部错误',
+    code: isHttpError ? error.code : isRequestError ? requestErrorCode : 'internal_error',
+    message: isHttpError ? error.message : isRequestError ? requestErrorMessage : '服务内部错误',
     ...(isHttpError && error.details ? { details: error.details } : {}),
   })
 }

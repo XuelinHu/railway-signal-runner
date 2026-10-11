@@ -9,3 +9,9 @@ dist
 public/assets/models/*.glb
 # 本地 Claude Code 配置（.claude/ 下还有 116M 的 git worktree）
 .claude/
+
+/android/.gradle/
+/android/local.properties
+/android/app/build/
+/android/build/
+/dist/*.apk

@@ -169,7 +169,27 @@ CREATE INDEX IF NOT EXISTS audit_logs_created_idx ON audit_logs (created_at DESC
 CREATE INDEX IF NOT EXISTS audit_logs_user_idx    ON audit_logs (user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS audit_logs_action_idx  ON audit_logs (action, created_at DESC);
 
--- ============================ 业务数据（扩展现有两张表） ============================
+-- ============================ 训练数据 ============================
+
+-- Fresh installs need the core training tables before the shared schema adds
+-- account ownership, publication, and pagination fields below.
+CREATE TABLE IF NOT EXISTS training_scenes (
+  id         TEXT PRIMARY KEY,
+  name       TEXT NOT NULL,
+  payload    JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS training_records (
+  id              TEXT PRIMARY KEY,
+  scene_id        TEXT,
+  student_name    TEXT,
+  score           INTEGER,
+  elapsed_seconds INTEGER,
+  payload         JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
 
 ALTER TABLE training_scenes ADD COLUMN IF NOT EXISTS owner_id     TEXT REFERENCES users(id) ON DELETE SET NULL;
 ALTER TABLE training_scenes ADD COLUMN IF NOT EXISTS published    BOOLEAN NOT NULL DEFAULT FALSE;

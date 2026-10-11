@@ -1,12 +1,13 @@
-import { readFile } from 'node:fs/promises'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import pg from 'pg'
+import { applyMigrations } from '../server/src/db/migrations.js'
 
-const { Client } = pg
+const { Client, Pool } = pg
 
 const here = dirname(fileURLToPath(import.meta.url))
 const schemaFile = resolve(here, '../server/src/db/schema.sql')
+const migrationsDir = resolve(here, '../server/src/db/migrations')
 
 const config = {
   host: process.env.PGHOST || '127.0.0.1',
@@ -35,13 +36,13 @@ if (exists.rowCount === 0) {
 
 await admin.end()
 
-const app = new Client({ ...config, database: targetDatabase })
-await app.connect()
+const app = new Pool({ ...config, database: targetDatabase })
 
-// schema.sql 全部语句幂等，可重复执行；已有的 training_scenes / training_records 走 ALTER 原地扩展。
-const schema = await readFile(schemaFile, 'utf8')
-await app.query(schema)
-console.log(`applied schema from ${schemaFile}`)
+const migrationResult = await applyMigrations(app, {
+  baselinePath: schemaFile,
+  migrationsDir,
+})
+console.log(`applied migrations: ${migrationResult.applied.join(', ')}`)
 
 const { rows } = await app.query(`
   SELECT table_name

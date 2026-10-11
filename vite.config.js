@@ -1,4 +1,6 @@
 import { defineConfig } from 'vite'
+import { copyFileSync, existsSync, mkdirSync } from 'node:fs'
+import { resolve } from 'node:path'
 import vue from '@vitejs/plugin-vue'
 import cesium from 'vite-plugin-cesium'
 
@@ -28,8 +30,21 @@ const apiProxy = {
   },
 }
 
+const preserveReleaseApk = {
+  name: 'preserve-release-apk',
+  apply: 'build',
+  closeBundle() {
+    const source = resolve('android/app/build/outputs/apk/release/app-release.apk')
+    if (!existsSync(source)) return
+
+    const outputDirectory = resolve('dist')
+    mkdirSync(outputDirectory, { recursive: true })
+    copyFileSync(source, resolve(outputDirectory, 'signal-runner-release.apk'))
+  },
+}
+
 export default defineConfig({
-  plugins: [vue(), cesium()],
+  plugins: [vue(), cesium(), preserveReleaseApk],
   server: {
     host: '0.0.0.0',
     port: 4029,

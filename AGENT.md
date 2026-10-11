@@ -19,6 +19,7 @@
 - API: `npm run api` (or `npm run api:dev` for `node --watch`).
 - First deploy: `npm run db:init` then `npm run seed:admin -- --username admin --password '<strong>'`.
 - Demo data (idempotent, `demo-` prefixed): `npm run seed:demo`.
+- Tests: `npm test`. PostgreSQL API integration requires an isolated database whose name ends in `_test`; enable with `RUN_POSTGRES_INTEGRATION=1 node --env-file=server/.env --test test/postgres-api.integration.test.js`. The integration test uses a local Ollama protocol stub and never loads a model.
 - The browser only ever talks to `:4029/api/*`; Vite proxies it to `:8038` in **both** dev and preview.
   The proxy strips the `Origin` header — Ollama 0.19 returns `403` for requests that carry one.
 

@@ -46,6 +46,20 @@ npm run build
 npm run preview
 ```
 
+如果已构建 Android release，`npm run build` 会在 Vite 清理 `dist/` 后自动保留 `dist/signal-runner-release.apk`。
+
+## 测试
+
+```bash
+npm test
+```
+
+PostgreSQL API 集成测试只允许连接名称以 `_test` 结尾的隔离库，并使用本地 Ollama 协议桩，不会启动真实模型：
+
+```bash
+RUN_POSTGRES_INTEGRATION=1 node --env-file=server/.env --test test/postgres-api.integration.test.js
+```
+
 ## 资源
 
 模型资源位于 `public/assets/models`，来自当前工作区的 `railway_sign/public/assets/models`。
