@@ -11,7 +11,7 @@
     "preview": "vite preview --host 0.0.0.0 --port 4029",
     "api": "node server/src/server.js",
     "api:dev": "node --watch server/src/server.js",
-    "db:init": "node scripts/init-postgres.mjs",
+    "db:init": "node --env-file-if-exists=server/.env scripts/init-postgres.mjs",
     "db:backup": "node --env-file-if-exists=server/.env scripts/pg-backup.mjs backup",
     "db:restore": "node --env-file-if-exists=server/.env scripts/pg-backup.mjs restore",
     "test:db:backup": "node --env-file-if-exists=server/.env scripts/pg-backup-smoke.mjs",
