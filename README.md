@@ -5,6 +5,7 @@
   <img height="20" alt="Vite 7.3.1" src="https://img.shields.io/badge/vite-7.3.1-646CFF" />
   <img height="20" alt="CesiumJS 1.137.0" src="https://img.shields.io/badge/cesiumjs-1.137.0-6CADDF" />
   <img height="20" alt="Three.js 0.182.0" src="https://img.shields.io/badge/three.js-0.182.0-000000" />
+  <img height="20" alt="PostgreSQL configured" src="https://img.shields.io/badge/postgresql-configured-4169E1" />
   <img height="20" alt="License GPL-2.0" src="https://img.shields.io/badge/license-GPL--2.0-3DA639" />
 </p>
 
@@ -76,10 +77,17 @@ RUN_POSTGRES_INTEGRATION=1 node --env-file=server/.env --test test/postgres-api.
 
 ```bash
 npm install
-npm run db:init                                        # 幂等建表
+npm run db:init                                        # 使用项目运行角色幂等建表
 npm run seed:demo                                      # 造分页验证用的演示数据（demo- 前缀，可 --clean）
 npm run dev                                            # 前端 4029
 npm run api                                            # 后端 8038（api:dev 为 node --watch）
+```
+
+首次部署前，由 PostgreSQL 管理员在目标实例执行 `server/postgres/provision-role.psql`，按提示创建本项目专属数据库和受限运行角色，并在 `server/.env` 配置该角色凭据。应用运行角色不负责建库或管理其他项目；随后运行 `npm run db:init` 初始化 schema。Windows 本机 PostgreSQL 18 示例：
+
+```powershell
+$pgAdmin = Read-Host 'PostgreSQL 管理员角色'
+& 'C:\Program Files\PostgreSQL\18\bin\psql.exe' -h 127.0.0.1 -p 5432 -U $pgAdmin -d postgres -f server/postgres/provision-role.psql
 ```
 
 PowerShell 下可交互输入管理员密码，避免把明文放进命令参数：
@@ -99,8 +107,8 @@ Read-Host '管理员密码' -AsSecureString | ForEach-Object {
 
 ### PostgreSQL
 
-- 已真实接入运行时，API 直接读写；数据库名 `railway_signal_runner`，初始化脚本 `scripts/init-postgres.mjs`。
-- 连接变量：`PGHOST=192.168.1.9`、`PGPORT=5433`、`PGUSER=deipss`、`PGPASSWORD=<your-postgres-password>`、`PGDATABASE=railway_signal_runner`。
+- 已真实接入运行时，API 直接读写；数据库名 `railway_signal_runner`，初始化脚本 `scripts/init-postgres.mjs` 只执行 schema migration，不创建数据库。
+- 运行连接使用 `PGUSER=railway_signal_runner_app` 和本项目独立口令；`deipss` 等管理员身份仅用于人工 provision，不得放进应用运行配置。LAN 连接可设置 `PGHOST=192.168.1.9`、`PGPORT=5433`。
 - 表：`users`、`refresh_tokens`、`password_reset_tokens`、`login_logs`、`ai_conversations`、`ai_messages`、`ai_request_logs`、`system_settings`、`audit_logs`，以及扩展后的 `training_scenes`、`training_records`。
 - 配置模板见 `server/env.example`，复制为 `server/.env` 后填写；`server/.env` 已被 `.gitignore` 忽略，**切勿提交**。
 
