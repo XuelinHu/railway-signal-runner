@@ -40,11 +40,11 @@ export const config = {
   projectRoot,
 
   api: {
-    host: str('API_HOST', '0.0.0.0'),
+    host: str('API_HOST', '127.0.0.1'),
     // 8038 取自本工作区后端端口段的预留位（8038-8040）。
     // 注意不要用 8037：该端口已被相邻项目 railway_sign 的 API 占用，
     // 占用会导致 Vite 的 /api 代理打到错误的服务上。
-    // 该端口会被 frpc.toml 的范围模板自动映射到公网 18038。
+    // API 只绑定 loopback，由 Vite 的 HTTPS 前端代理访问。
     port: num('API_PORT', 8038),
   },
 
