@@ -2,6 +2,7 @@ import * as THREE from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { clone as cloneModel } from 'three/examples/jsm/utils/SkeletonUtils.js'
 import { findCatalogItem } from './modelCatalog'
+import { findNearbyEquipment } from './equipmentProximity.js'
 
 const CAMERA_HEIGHT = 3.6
 const WORLD_LIMITS = {
@@ -80,6 +81,7 @@ export function createRailwayGame({ canvas, host, onState, onSignals, onEvent })
   const loader = new GLTFLoader()
   const clock = new THREE.Clock()
   const models = new Map()
+  const modelPromises = new Map()
   const editableObjects = new Map()
   const editorGroup = new THREE.Group()
   const raycaster = new THREE.Raycaster()
@@ -92,6 +94,8 @@ export function createRailwayGame({ canvas, host, onState, onSignals, onEvent })
   let animationFrame = 0
   let resizeObserver
   let train = null
+  let trainingAvatar = null
+  let avatarFloorOffset = 0
   let trainProgress = 0
   let yaw = INITIAL_YAW
   let pitch = -0.06
@@ -99,6 +103,7 @@ export function createRailwayGame({ canvas, host, onState, onSignals, onEvent })
   let pointerLocked = false
   let completed = false
   let ready = false
+  let modelsReady = Promise.resolve()
   let audioEnabled = false
   let lastStateEmit = 0
   let lastWarningAt = 0
@@ -106,6 +111,7 @@ export function createRailwayGame({ canvas, host, onState, onSignals, onEvent })
   let distanceTravelled = 0
   let health = 100
   let lastPosition = new THREE.Vector3(-116, CAMERA_HEIGHT, -87)
+  const trainingSpawn = new THREE.Vector3(-116, CAMERA_HEIGHT, -87)
   let dragLook = null
   let runStartedAt = 0
   let editorMode = false
@@ -136,7 +142,8 @@ export function createRailwayGame({ canvas, host, onState, onSignals, onEvent })
     },
     heading: 0,
     geo: worldToGeo(-116, -87),
-    audioEnabled: false
+    audioEnabled: false,
+    nearbyEquipment: null
   }
 
   const audio = {
@@ -161,8 +168,8 @@ export function createRailwayGame({ canvas, host, onState, onSignals, onEvent })
     renderer.toneMapping = THREE.ACESFilmicToneMapping
     renderer.toneMappingExposure = 1.05
 
-    scene.background = new THREE.Color(0x9fb9bc)
-    scene.fog = new THREE.FogExp2(0x9fb9bc, 0.008)
+    scene.background = new THREE.Color(0xdceaf0)
+    scene.fog = new THREE.FogExp2(0xdceaf0, 0.004)
 
     camera.position.copy(lastPosition)
     updateCameraRotation()
@@ -175,14 +182,10 @@ export function createRailwayGame({ canvas, host, onState, onSignals, onEvent })
     resizeObserver = new ResizeObserver(resize)
     resizeObserver.observe(host || canvas)
 
-    ready = true
-    state.ready = true
-    state.loading = '已就绪'
-    state.phase = '自由布置'
+    state.loading = '加载铁路与信号模型'
     emitState(0, true)
-    emitSignals()
-    onEvent?.({ type: 'ready', message: '空白场景已就绪' })
     animate()
+    modelsReady = loadModels()
   }
 
   function setupLights() {
@@ -225,14 +228,14 @@ export function createRailwayGame({ canvas, host, onState, onSignals, onEvent })
     textureCanvas.width = 512
     textureCanvas.height = 512
     const ctx = textureCanvas.getContext('2d')
-    ctx.fillStyle = '#566552'
+    ctx.fillStyle = '#a8bca3'
     ctx.fillRect(0, 0, 512, 512)
 
     for (let i = 0; i < 2200; i += 1) {
       const x = Math.random() * 512
       const y = Math.random() * 512
-      const g = 74 + Math.random() * 42
-      ctx.fillStyle = `rgba(${g}, ${g + 16}, ${g - 8}, ${0.18 + Math.random() * 0.22})`
+      const g = 115 + Math.random() * 42
+      ctx.fillStyle = `rgba(${g}, ${g + 15}, ${g - 4}, ${0.12 + Math.random() * 0.16})`
       ctx.fillRect(x, y, 1 + Math.random() * 2, 1 + Math.random() * 2)
     }
 
@@ -337,7 +340,7 @@ export function createRailwayGame({ canvas, host, onState, onSignals, onEvent })
 
     const entries = Object.entries(MODEL_URLS)
     const loaded = await Promise.allSettled(
-      entries.map(async ([name, url]) => [name, await loader.loadAsync(url)])
+      entries.map(async ([name, url]) => [name, await loadCatalogModel(url)])
     )
 
     loaded.forEach((result) => {
@@ -358,6 +361,7 @@ export function createRailwayGame({ canvas, host, onState, onSignals, onEvent })
     placeRailway()
     placeSignals()
     placeSceneModels()
+    placeTrainingAvatar()
     ready = true
     state.ready = true
     state.loading = '已就绪'
@@ -539,6 +543,32 @@ export function createRailwayGame({ canvas, host, onState, onSignals, onEvent })
     placeTrain()
   }
 
+  function placeTrainingAvatar() {
+    const model = models.get('man') || models.get('worker')
+    if (!model) return
+    trainingAvatar = cloneScene(model.scene)
+    const bounds = new THREE.Box3().setFromObject(trainingAvatar)
+    const height = bounds.max.y - bounds.min.y
+    if (height > 0) trainingAvatar.scale.setScalar(2.8 / height)
+    avatarFloorOffset = -new THREE.Box3().setFromObject(trainingAvatar).min.y
+    trainingAvatar.traverse((child) => { if (child.isMesh) child.castShadow = true })
+    scene.add(trainingAvatar)
+    updateTrainingAvatar()
+  }
+
+  function updateTrainingAvatar() {
+    if (!trainingAvatar) return
+    trainingAvatar.visible = !editorMode
+    if (!trainingAvatar.visible) return
+    const forward = new THREE.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw))
+    trainingAvatar.position.set(
+      camera.position.x + forward.x * 5,
+      avatarFloorOffset + (running ? Math.sin(elapsed * 8) * 0.025 : 0),
+      camera.position.z + forward.z * 5
+    )
+    trainingAvatar.rotation.y = yaw + Math.PI
+  }
+
   function createFallbackStation() {
     const station = new THREE.Group()
     const body = new THREE.Mesh(
@@ -568,11 +598,16 @@ export function createRailwayGame({ canvas, host, onState, onSignals, onEvent })
     if (locomotive) {
       train = cloneScene(locomotive.scene)
       train.scale.setScalar(11.5)
+      const bounds = new THREE.Box3().setFromObject(train)
+      const size = bounds.getSize(new THREE.Vector3())
+      const length = Math.max(size.x, size.z)
+      if (length > 0) train.scale.multiplyScalar(22 / length)
     } else {
       train = createFallbackTrain()
     }
 
-    const start = trainCurve.getPointAt(0.1)
+    trainProgress = 0.7
+    const start = trainCurve.getPointAt(trainProgress)
     train.position.copy(start)
     train.position.y = 0.7
     train.rotation.y = -ROUTE_ANGLE + Math.PI / 2
@@ -767,6 +802,7 @@ export function createRailwayGame({ canvas, host, onState, onSignals, onEvent })
     }
 
     mixers.forEach((mixer) => mixer.update(delta))
+    updateTrainingAvatar()
     renderer.render(scene, camera)
     emitState(delta)
   }
@@ -913,6 +949,7 @@ export function createRailwayGame({ canvas, host, onState, onSignals, onEvent })
     lastStateEmit = now
 
     const nearest = findNearest()
+    state.nearbyEquipment = findNearbyEquipment(signalRuntime.values(), camera.position)
     const inspected = Array.from(signalRuntime.values()).filter((signal) => signal.inspected).length
 
     state.ready = ready
@@ -1036,7 +1073,13 @@ function emitSignals() {
   async function loadCatalogModel(url) {
     const cacheKey = `catalog:${url}`
     if (models.has(cacheKey)) return models.get(cacheKey)
-    const gltf = await loader.loadAsync(url)
+    if (!modelPromises.has(url)) {
+      modelPromises.set(url, loader.loadAsync(url).catch((error) => {
+        modelPromises.delete(url)
+        throw error
+      }))
+    }
+    const gltf = await modelPromises.get(url)
     models.set(cacheKey, gltf)
     return gltf
   }
@@ -1288,12 +1331,30 @@ function emitSignals() {
 
   async function importEditableObjects(objects) {
     clearEditableObjects()
-    for (const sourceObject of objects) {
+    const loaded = await Promise.all(objects.map(async (sourceObject) => {
       const catalog = findCatalogItem(sourceObject.catalogKey)
-      if (!catalog) continue
-      const object = await createEditableObject(catalog, sourceObject)
+      if (!catalog) return null
+      return createEditableObject(catalog, sourceObject)
+    }))
+    for (const object of loaded) {
+      if (!object) continue
       editorGroup.add(object)
       editableObjects.set(object.userData.editor.id, object)
+    }
+    if (!editorMode) {
+      const first = objects.find((object) => object.inspectionPoint && object.position)
+      if (first) {
+        trainingSpawn.set(
+          THREE.MathUtils.clamp(first.position.x - 11, WORLD_LIMITS.minX, WORLD_LIMITS.maxX),
+          CAMERA_HEIGHT,
+          THREE.MathUtils.clamp(first.position.z - 9, WORLD_LIMITS.minZ, WORLD_LIMITS.maxZ)
+        )
+        camera.position.copy(trainingSpawn)
+        lastPosition.copy(trainingSpawn)
+        yaw = INITIAL_YAW
+        pitch = -0.06
+        updateCameraRotation()
+      }
     }
     syncTrainingTargetsFromEditableObjects()
     emitEditorEvent()
@@ -1313,6 +1374,9 @@ function emitSignals() {
       signalRuntime.set(editor.id, {
         id: editor.id,
         label: editor.task?.title || editor.name || `巡检点 ${index + 1}`,
+        name: editor.name,
+        catalogKey: editor.catalogKey,
+        task: editor.task,
         state: editor.task?.faultType || 'normal',
         x: object.position.x,
         z: object.position.z,
@@ -1447,7 +1511,7 @@ function createDefaultObjectTask(name) {
     health = 100
     yaw = INITIAL_YAW
     pitch = -0.06
-    camera.position.set(-116, CAMERA_HEIGHT, -87)
+    camera.position.copy(trainingSpawn)
     lastPosition.copy(camera.position)
     updateCameraRotation()
     signalRuntime.forEach((signal) => {
@@ -1516,6 +1580,7 @@ function createDefaultObjectTask(name) {
   init()
 
   return {
+    ready: modelsReady,
     start,
     pause,
     reset,

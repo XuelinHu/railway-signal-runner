@@ -19,7 +19,8 @@
     "test:db:backup": "node --env-file-if-exists=server/.env scripts/pg-backup-smoke.mjs",
     "test": "node --test",
     "seed:admin": "node scripts/seed-admin.mjs",
-    "seed:demo": "node scripts/seed-demo-data.mjs"
+    "seed:demo": "node scripts/seed-demo-data.mjs",
+    "seed:training": "node --env-file-if-exists=server/.env scripts/seed-default-training-scene.mjs"
   },
   "dependencies": {
     "@lucide/vue": "^1.17.0",

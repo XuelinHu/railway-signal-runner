@@ -5,7 +5,7 @@
 - Project: `railway-signal-runner`
 - Stack: Vue 3, Vite, CesiumJS, Three.js, Cannon, Dexie, Pinia
 - Backend: Node + Express 5 (ESM), PostgreSQL 18, Ollama
-- Type: first-person railway signal inspection/training platform
+- Type: railway signal inspection/training platform with a light third-person default scene
 
 ## Runtime
 
@@ -19,6 +19,7 @@
 - API: `npm run api` (or `npm run api:dev` for `node --watch`).
 - First deploy: `npm run db:init` then `npm run seed:admin -- --username admin --password '<strong>'`.
 - Demo data (idempotent, `demo-` prefixed): `npm run seed:demo`.
+- Default 3D training scene: `npm run seed:training` (idempotent, preserves existing fixed-ID scene). API startup also ensures it exists.
 - Tests: `npm test`. PostgreSQL API integration requires an isolated database whose name ends in `_test`; enable with `RUN_POSTGRES_INTEGRATION=1 node --env-file=server/.env --test test/postgres-api.integration.test.js`. The integration test uses a local Ollama protocol stub and never loads a model.
 - The browser only ever talks to `:4029/api/*`; Vite proxies it to `:8038` in **both** dev and preview.
   The proxy strips the `Origin` header — Ollama 0.19 returns `403` for requests that carry one.
@@ -26,12 +27,13 @@
 ## Data Storage
 
 - Active browser DB: IndexedDB via Dexie (`railway-signal-runner`, stores `scenes` and `records`).
-  Still used when offline / not logged in, so the teacher and student flows keep working without the backend.
+  A fixed-ID example scene is seeded only if absent. Authenticated teachers/admins save locally and to the cloud API; anonymous editing saves only locally.
 - PostgreSQL **is** wired into the runtime now — the API reads and writes it directly.
 - PostgreSQL database name: `railway_signal_runner`; init script: `scripts/init-postgres.mjs`.
 - Tables: `users`, `refresh_tokens`, `password_reset_tokens`, `login_logs`, `ai_conversations`,
   `ai_messages`, `ai_request_logs`, `system_settings`, `audit_logs`, plus the extended
   `training_scenes` and `training_records`.
+- Migration `009_ai_equipment_context.sql` adds message-level scene and equipment context. Existing tables may require the owning PostgreSQL role to run ALTER TABLE; do not edit the applied baseline checksum.
 - Connection env vars: `PGHOST`, `PGPORT`, `PGUSER`, `PGPASSWORD`, `PGDATABASE`.
   Copy `server/env.example` to `server/.env` and fill it in; `server/.env` is gitignored and must never be committed.
 - Model discovery reads `GET {OLLAMA_BASE_URL}/api/tags` first, then falls back to scanning the

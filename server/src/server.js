@@ -4,6 +4,8 @@ import { closePool, healthCheck } from './db/pool.js'
 import { purgeExpiredTokens } from './services/tokenService.js'
 import { purgeExpiredResetTokens } from './repositories/tokenRepository.js'
 import { logger } from './utils/logger.js'
+import { ensureDevTestAccounts } from './services/devTestAccounts.js'
+import { ensureDefaultCloudScene } from './services/defaultSceneService.js'
 
 const app = createApp()
 
@@ -18,6 +20,24 @@ const server = app.listen(config.api.port, config.api.host, async () => {
   const db = await healthCheck()
   if (db.ok) logger.info('数据库连接正常', { database: db.database })
   else logger.error('数据库连接失败，请检查 PGPASSWORD 与库是否已初始化', { error: db.error })
+
+  if (db.ok) {
+    try {
+      const defaultScene = await ensureDefaultCloudScene()
+      logger.info('默认实训场已就绪', defaultScene)
+    } catch (error) {
+      logger.warn('默认实训场初始化失败', { error: error.message })
+    }
+  }
+
+  if (db.ok && config.auth.devTestLogin) {
+    try {
+      await ensureDevTestAccounts()
+      logger.info('本机测试登录账号已就绪')
+    } catch (error) {
+      logger.warn('测试账号初始化失败', { error: error.message })
+    }
+  }
 
   // 启动时清理一次过期令牌，之后每小时一次。
   runCleanup()

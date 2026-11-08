@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="640" viewBox="0 0 760 640">
+  <rect width="760" height="640" fill="#fff"/>
+  <defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10Z" fill="#252c29"/></marker></defs>
+  <g font-family="Noto Sans CJK SC, sans-serif" font-size="17">
+    <rect x="20" y="20" width="720" height="112" rx="6" fill="#29634e"/>
+    <text x="42" y="49" fill="white" font-weight="bold">页面层 · Vue / Vue Router / Pinia</text>
+    <rect x="42" y="63" width="210" height="49" rx="4" fill="#fff"/><rect x="275" y="63" width="210" height="49" rx="4" fill="#fff"/><rect x="508" y="63" width="210" height="49" rx="4" fill="#fff"/>
+    <g text-anchor="middle" fill="#202924"><text x="147" y="94">教师场景编辑</text><text x="380" y="94">学生任务与训练</text><text x="613" y="94">账号与管理台</text></g>
+    <rect x="20" y="167" width="720" height="130" rx="6" fill="#dcebe3" stroke="#29634e"/>
+    <text x="42" y="198" fill="#173d2d" font-weight="bold">客户端应用层</text>
+    <rect x="42" y="216" width="210" height="53" rx="4" fill="white" stroke="#29634e"/><rect x="275" y="216" width="210" height="53" rx="4" fill="white" stroke="#29634e"/><rect x="508" y="216" width="210" height="53" rx="4" fill="white" stroke="#29634e"/>
+    <g text-anchor="middle" fill="#202924"><text x="147" y="249">Three.js 模型交互</text><text x="380" y="249">任务序列化 / Dexie</text><text x="613" y="249">Cesium 小地图</text></g>
+    <rect x="20" y="332" width="720" height="112" rx="6" fill="#f3e5df" stroke="#984c3a"/>
+    <text x="42" y="363" fill="#853b2c" font-weight="bold">服务端业务层 · Node / Express</text>
+    <rect x="42" y="380" width="210" height="43" rx="4" fill="white" stroke="#984c3a"/><rect x="275" y="380" width="210" height="43" rx="4" fill="white" stroke="#984c3a"/><rect x="508" y="380" width="210" height="43" rx="4" fill="white" stroke="#984c3a"/>
+    <g text-anchor="middle" fill="#202924"><text x="147" y="408">认证与角色校验</text><text x="380" y="408">场景 / 成绩接口</text><text x="613" y="408">AI 流式对话接口</text></g>
+    <rect x="20" y="479" width="720" height="116" rx="6" fill="#eeeae1" stroke="#74664b"/>
+    <text x="42" y="510" fill="#514b37" font-weight="bold">持久化与外部服务</text>
+    <rect x="42" y="530" width="210" height="43" rx="4" fill="white" stroke="#74664b"/><rect x="275" y="530" width="210" height="43" rx="4" fill="white" stroke="#74664b"/><rect x="508" y="530" width="210" height="43" rx="4" fill="white" stroke="#74664b"/>
+    <g text-anchor="middle" fill="#202924"><text x="147" y="558">浏览器 IndexedDB</text><text x="380" y="558">PostgreSQL</text><text x="613" y="558">配置的模型服务</text></g>
+  </g>
+  <g fill="none" stroke="#252c29" stroke-width="2" marker-end="url(#a)"><path d="M380 132v29"/><path d="M380 297v29"/><path d="M380 444v29"/><path d="M147 269v246"/><path d="M613 423v92"/></g>
+  <text x="163" y="458" font-family="Noto Sans CJK SC, sans-serif" fill="#29372e" font-size="13">本地保存</text>
+  <text x="382" y="313" font-family="Noto Sans CJK SC, sans-serif" fill="#29372e" font-size="13">/api 请求</text>
+</svg>

@@ -5,6 +5,7 @@ import { insertLoginLog, insertAuditLog } from '../repositories/logRepository.js
 import { hashPassword, verifyPassword, randomToken } from './passwordService.js'
 import { issueRefreshToken, revokeAllUserTokens, signAccessToken } from './tokenService.js'
 import { badRequest, conflict, forbidden, unauthorized } from '../utils/httpError.js'
+import { isDevTestAccount } from './devTestAccounts.js'
 
 /** 对外的用户视图：绝不包含 password_hash 或锁定细节以外的内部字段。 */
 export function toPublicUser(user) {
@@ -85,6 +86,10 @@ export async function login({ username, password }, ctx) {
       userAgent,
     })
     throw unauthorized('用户名或密码错误', 'bad_credentials')
+  }
+
+  if (isDevTestAccount(user) && !config.auth.devTestLogin) {
+    throw forbidden('测试账号仅限开发环境', 'dev_account_disabled')
   }
 
   if (user.status === 'disabled') {
@@ -168,6 +173,7 @@ export async function login({ username, password }, ctx) {
 export async function loginWithOidcSubject(subject, ctx) {
   const user = await users.findByOidcSubject(subject)
   if (!user) throw unauthorized('该统一身份尚未绑定有效的巡检实训平台账号，请先用本地账号登录并绑定', 'oidc_account_not_linked')
+  if (isDevTestAccount(user) && !config.auth.devTestLogin) throw forbidden('测试账号仅限开发环境', 'dev_account_disabled')
   await users.recordLoginSuccess(user.id, ctx?.ip)
   await insertLoginLog({ userId: user.id, usernameInput: user.username, success: true, ip: ctx?.ip, userAgent: ctx?.userAgent })
   const refresh = await issueRefreshToken(user.id, { ip: ctx?.ip, userAgent: ctx?.userAgent })
@@ -183,6 +189,7 @@ export async function loginWithOidcSubject(subject, ctx) {
 export async function loadUserForToken(userId) {
   const user = await users.findById(userId)
   if (!user || user.deleted_at) throw unauthorized('账号不存在或已注销', 'account_missing')
+  if (isDevTestAccount(user) && !config.auth.devTestLogin) throw forbidden('测试账号仅限开发环境', 'dev_account_disabled')
   if (user.status === 'disabled') throw forbidden('账号已被禁用，请联系管理员', 'account_disabled')
   if (user.status === 'locked') throw forbidden('账号已锁定，请联系管理员解锁', 'account_locked')
   return user

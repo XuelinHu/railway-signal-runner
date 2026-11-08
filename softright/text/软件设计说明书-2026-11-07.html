@@ -1,0 +1,573 @@
+<!DOCTYPE html><html lang='zh-CN'><head><meta charset='utf-8'><title>软件设计说明书</title><style>
+      @page { size:A4; margin:17mm 15mm 16mm;
+        @top-center { content:'第一人称铁道信号巡检仿真实训平台 V1.0 软件设计说明书'; font-family:'Noto Sans CJK SC','SimHei',sans-serif; font-size:8pt; color:#111; }
+      }
+      @page:first { @top-center { content:none; } }
+      html, body { margin:0; padding:0; color:#111; background:#fff; font-family:'Noto Sans CJK SC','SimHei',sans-serif; }
+      * { box-sizing:border-box; letter-spacing:0; }
+      .cover { height:260mm; display:flex; flex-direction:column; justify-content:center; align-items:center; gap:15mm; page-break-after:always; text-align:center; }
+      .cover .name { font-size:20pt; font-weight:700; line-height:1.45; max-width:170mm; }
+      .cover .version, .cover .kind { font-size:17pt; font-weight:700; }
+      .contents { page-break-after:always; }
+      .contents h2 { font-size:16pt; border-bottom:1px solid #111; padding-bottom:5mm; }
+      .contents a { color:#111; text-decoration:none; }
+      .contents ol { margin:0; padding:0 0 0 10mm; }
+      .contents li { margin-bottom:3mm; font-size:11pt; }
+      main { font-size:10.5pt; line-height:1.67; overflow-wrap:anywhere; }
+      main h2 { font-size:15pt; line-height:1.35; font-weight:700; margin:8mm 0 3mm; break-after:avoid; }
+      main h3 { font-size:11.5pt; line-height:1.35; font-weight:700; margin:5mm 0 2mm; break-after:avoid; }
+      main p { text-indent:2em; margin:2mm 0 3mm; orphans:3; widows:3; }
+      main p:has(img) { text-indent:0; display:flex; align-items:flex-start; justify-content:center; gap:3mm; break-inside:avoid; margin:4mm 0 1mm; }
+      main p img { display:block; flex:0 1 auto; max-width:100%; max-height:115mm; object-fit:contain; }
+      main p img:nth-child(2) { max-width:49%; }
+      main p:has(img:nth-child(2)) img:first-child { max-width:49%; }
+      main p:has(img) + p { text-indent:0; font-size:9pt; line-height:1.5; break-before:avoid; }
+      main table { border-collapse:collapse; width:100%; font-size:9pt; line-height:1.4; margin:4mm 0; border-top:1.5px solid #111; border-bottom:1.5px solid #111; }
+      main th { border-bottom:1px solid #111; text-align:left; font-weight:700; }
+      main th, main td { padding:2mm; vertical-align:top; overflow-wrap:anywhere; }
+      main tr { break-inside:avoid; }
+      main code { font-family:'Noto Sans Mono CJK SC','DejaVu Sans Mono',monospace; font-size:.87em; }
+      .source { font-size:8.3pt; line-height:1.25; font-family:'Noto Sans Mono CJK SC','DejaVu Sans Mono',monospace; }
+      .source .source-path { font-family:'Noto Sans CJK SC',sans-serif; font-size:9pt; font-weight:700; border-bottom:1px solid #111; margin:3mm 0 2mm; padding-bottom:1mm; break-after:avoid; }
+      .source .code-line { white-space:pre-wrap; overflow-wrap:anywhere; min-height:10.8pt; }
+      .source .annotation { font-size:9pt; line-height:1.35; margin:0 0 4mm; }
+      @media print { img, svg { print-color-adjust:exact; -webkit-print-color-adjust:exact; } }
+    </style></head><body><section class='cover'><div class='name'>第一人称铁道信号巡检仿真实训平台</div><div class='version'>版本号：V1.0</div><div class='kind'>软件设计说明书</div></section><nav class='contents'><h2>目录</h2><ol><li>引言</li><li>需求概要分析</li><li>系统范围与总体架构</li><li>模块划分和状态设计</li><li>教师场景编辑详细设计</li><li>学生巡检训练详细设计</li><li>身份认证与账户详细设计</li><li>云端场景、成绩和管理详细设计</li><li>AI 对话与语音详细设计</li><li>数据模型与持久化设计</li><li>接口设计</li><li>部署、运维和恢复设计</li><li>安全与权限设计</li><li>测试与验证</li><li>结论与待确认事项</li></ol></nav><main><h2>1. 引言</h2>
+<h3>1.1 编写目的</h3>
+<p>本文针对当前仓库可核验的代码与运行页面，记录软件边界、核心业务过程、数据结构、接口约束、部署条件及实际测试状态。阅读对象为维护三维训练与后台服务的开发人员、验收人员和软件著作权材料核对人员。文字描述的是实现事实，不把演示账号、测试截图或设计意向写成真实生产使用经历。</p>
+<h3>1.2 软件标识和版本依据</h3>
+<p>软件正式名称暂采用首页标题“第一人称铁道信号巡检仿真实训平台”，简称“铁道信号巡检实训平台”。本稿暂以 V1.0 排版；Web 包 <code>package.json</code> 标示 0.1.0，Android <code>versionName</code> 为 1.0.0，两者并不能自动决定登记版本，需著作权人确认后统一封面、信息表和登记表。本次主要分析 Web 与配套 Node 服务；Android 工程存在不代表 Android 真机所有能力已经验证。</p>
+<h3>1.3 依据和术语</h3>
+<p>事实主要来自 <code>src/router.js</code>、<code>src/components/RailwayFpsGame.vue</code>、<code>src/game/railwayGame.js</code>、<code>src/game/defaultTrainingScene.js</code>、<code>src/game/sceneSerializer.js</code>、<code>src/game/trainingSceneDb.js</code>、<code>server/src/routes/</code>、<code>server/src/db/schema.sql</code> 与 <code>009_ai_equipment_context.sql</code>。<code>inspectionPoint</code> 是可巡视目标；<code>payload</code> 是场景 JSON；<code>published</code> 是发布标志；<code>owner_id</code> 是云端场景归属。文中“本地”指浏览器 IndexedDB，“云端”指 PostgreSQL API；经认证的教师保存按钮会顺序尝试两处写入，匿名教师仍只保存本地，不能笼统说所有身份自动同步。</p>
+<h2>2. 需求概要分析</h2>
+<h3>2.1 业务背景与目标</h3>
+<p>铁路信号训练需要让学生辨认场景中的设备、理解任务顺序、靠近目标并查询设备知识。项目把教师布置与学生巡视分成不同工作流：默认示范场以真实 GLB 资源布置轨道、信号、道岔、站台和作业人员；学生从已发布场景进入亮色第三人称视角，接近目标后可调出带设备上下文的助手，再继续巡视。现有运行时“靠近自动巡视”，不是人工诊断评分。系统是教学仿真界面，不向真实铁路控制系统发送指令。</p>
+<h3>2.2 参与者与前提</h3>
+<p>匿名用户可进入身份选择、教师本地布置和学生默认场景列表；教师页面入口并非服务端 teacher 授权。场景默认种子在浏览器和 PostgreSQL 均以固定 ID 幂等建立，不覆盖已有教师修改。账号用户可访问账户资料及授权在线能力，普通 student 不能操作管理员接口；teacher/admin 保存时还可把场景写入云端并更新发布状态。AI 问答必须先登录，才能把问题、回答和设备关联记录在服务端。</p>
+<table>
+<thead>
+<tr>
+<th>工作流</th>
+<th>入口</th>
+<th>所需前提</th>
+<th>产生的数据</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>教师场景布置</td>
+<td><code>/#/teacher</code></td>
+<td>WebGL；云端保存需 teacher/admin</td>
+<td>IndexedDB <code>scenes</code>、导出 JSON；授权后写 PostgreSQL</td>
+</tr>
+<tr>
+<td>默认场景训练</td>
+<td><code>/#/student</code>、训练路径</td>
+<td>首次进入时初始化固定 ID 场景</td>
+<td>优先读已发布云端版本，断网时回退浏览器版本</td>
+</tr>
+<tr>
+<td>账号与管理</td>
+<td><code>/login</code>、<code>/account</code>、<code>/admin</code></td>
+<td>API/数据库连接及授权角色</td>
+<td>用户、日志、会话和服务端表</td>
+</tr>
+<tr>
+<td>设备智能体问答</td>
+<td>接近巡检点后的设备卡片</td>
+<td>登录、可用模型和网络</td>
+<td>会话、问答、scene_context 和 equipment_context</td>
+</tr>
+</tbody>
+</table>
+<h3>2.3 业务规则</h3>
+<p>教师将场景勾选“发布给学生”时，保存前至少需要一个 <code>inspectionPoint</code>。默认场景包含 13 个已有 GLB 模型对象，其中 7 个设为巡检点；首次访问本地库时只在缺失时写入，API 启动或 <code>seed:training</code> 对云端同 ID 做 <code>ON CONFLICT DO NOTHING</code>。学生列表优先显示合并后的云端已发布数据，把默认示范场置顶；无网络时至少保留本地默认版本。场景文件导入要求 <code>objects</code> 数组及各对象的 <code>catalogKey</code>。服务端对角色、归属和会话做独立校验。</p>
+<h3>2.4 非功能性约束和可用性</h3>
+<p>亮色三维场景依赖浏览器 WebGL、模型资源和足够的图形性能；人物资源采用当前项目已有的 <code>man.glb</code>/<code>work_man.glb</code>，没有从参考网站复制许可未明的模型。账号与云端读写依赖 PostgreSQL；问答依赖已配置模型。DeepSeek 存在且可用时作为新会话首选，无此模型则回退实际可用项。网络、模型或语音能力不足时应显示错误/降级，不可冒充生成回复。本地和云端场景有明确顺序与回退，但不是任意浏览器的所有草稿自动同步。</p>
+<h2>3. 系统范围与总体架构</h2>
+<h3>3.1 整体分层</h3>
+<p><img alt="图 3-1 平台模块与数据通道" src="../images/diagrams/系统结构.svg" /></p>
+<p>图 3-1 平台架构。页面层含角色、编辑、训练、账号和管理视图；客户端应用层维护 Three.js、Cesium 与 Dexie；服务端处理认证、授权后的云端场景、成绩与 AI。默认场景以固定 ID 分别播种到本地和 PostgreSQL，教师认证保存尝试更新两处；学生加载优先云端、异常时回退本地。两条路径的失败结果分别反馈。</p>
+<h3>3.2 客户端组织</h3>
+<p><code>src/router.js</code> 采用 Hash 路由：<code>/</code> 是身份页，<code>/teacher</code> 是教师场景编辑器，<code>/student</code> 列训练任务，<code>/student/training/:sceneId</code> 打开选中任务。登录、注册、找回密码、重置密码和账户资料为独立页面；<code>/admin</code> 下有概览、用户、登录日志、训练场景、成绩、AI 会话/日志、模型与系统设置等九个子路由。<code>RailwayFpsGame.vue</code> 组合画布、工具栏、模型库、对象属性和 GIS 小地图，并把游戏控制器暴露的状态更新映射到 Vue 响应式对象。</p>
+<h3>3.3 服务端组织</h3>
+<p><code>server/src/app.js</code> 创建 Express 应用，设置 JSON 请求体大小限制、CORS 白名单与统一错误处理，将 <code>auth</code>、<code>users</code>、<code>admin</code>、<code>ai</code>、<code>scenes</code>、<code>records</code> 路由挂在 <code>/api</code>。路由层调用身份服务、仓储和 Ollama 服务；仓储使用参数化 SQL 查询 PostgreSQL；迁移模块执行基线 schema 与编号迁移。前端开发/预览服务以 <code>/api</code> 代理到默认 API 端口，故浏览器请求保持同源。文中地址主机以 <code>***</code> 占位，不记录私有部署地址或凭据。</p>
+<h3>3.4 浏览器数据和服务端数据的边界</h3>
+<p>教师页面 <code>saveScene()</code> 在合法巡检点校验后立即提供 JSON 下载，接着 await Dexie <code>saveTrainingScene()</code>。若当前账号经后端认证为 teacher/admin，再调用 <code>POST /api/scenes</code>，随后调用发布接口；若云端调用失败，提示“本地已保存，云端未保存”，不撤销已保存的本地稿。学生列表合并本地和云端已发布场景，云端同 ID 覆盖列表元信息；进入训练时先 GET 云端完整 payload，失败则读取本地同 ID。成绩服务端表与 Dexie <code>records</code> 仍是两套存储，不能称为相互自动同步。</p>
+<h3>3.5 运行与部署拓扑</h3>
+<p>Web 默认 4029、API 默认 8038、PostgreSQL 端口从本机环境变量配置；Ollama 使用独立 <code>OLLAMA_BASE_URL</code>。<code>vite.config.js</code> 在 dev/preview 均配置 <code>/api</code> 代理，剥离特定 Origin 头以兼容上游服务。生产环境的 API 绑定地址、数据库用户、密钥和 CORS 白名单由运行配置决定；本文不替申请人推断公网部署、服务器型号或实际在线用户数。</p>
+<h2>4. 模块划分和状态设计</h2>
+<h3>4.1 模块职责清单</h3>
+<table>
+<thead>
+<tr>
+<th>模块</th>
+<th>主要源码</th>
+<th>输入</th>
+<th>输出与约束</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>模型资源目录</td>
+<td><code>modelCatalog.js</code></td>
+<td>类别和模型键</td>
+<td>可选模型、属性、资源地址</td>
+</tr>
+<tr>
+<td>场景对象编辑</td>
+<td><code>RailwayFpsGame.vue</code>、<code>railwayGame.js</code></td>
+<td>交互事件、坐标、配置</td>
+<td>编辑对象及选中状态</td>
+</tr>
+<tr>
+<td>场景文件规范化</td>
+<td><code>sceneSerializer.js</code></td>
+<td>名称、对象和元信息</td>
+<td><code>objects</code>、<code>tasks</code>、JSON；缺 catalogKey 拒绝</td>
+</tr>
+<tr>
+<td>浏览器数据库</td>
+<td><code>trainingSceneDb.js</code></td>
+<td>场景/成绩对象</td>
+<td>本地保存和列表，不负责跨端同步</td>
+</tr>
+<tr>
+<td>地图与导航</td>
+<td><code>CesiumMiniMap.vue</code>、<code>railwayGame.js</code></td>
+<td>世界坐标、信号点</td>
+<td>地理小地图与目标距离</td>
+</tr>
+<tr>
+<td>账号会话</td>
+<td><code>authService.js</code>、<code>tokenService.js</code></td>
+<td>用户名密码/令牌</td>
+<td>公开用户、访问与刷新令牌</td>
+</tr>
+<tr>
+<td>云端业务</td>
+<td><code>sceneRoutes.js</code>、<code>sceneRepository.js</code></td>
+<td>场景、成绩及身份</td>
+<td>PostgreSQL 数据，按角色和归属约束</td>
+</tr>
+<tr>
+<td>AI 对话</td>
+<td><code>aiRoutes.js</code>、<code>stores/agent.js</code></td>
+<td>消息、模型与上下文</td>
+<td>NDJSON 回复、会话与日志</td>
+</tr>
+<tr>
+<td>管理查询</td>
+<td><code>adminRoutes.js</code>、管理视图</td>
+<td>分页及过滤参数</td>
+<td>统计、列表和审计操作</td>
+</tr>
+</tbody>
+</table>
+<h3>4.2 三维运行时状态</h3>
+<p>运行时 <code>state.ready</code> 表示模型和画布已就绪，<code>running</code> 表示计时和输入处理进行中，<code>completed</code> 表示已满足任务完成条件。<code>inspected</code> 与 <code>total</code> 对应已完成巡检点数量和总量；<code>nearestId</code>、<code>nearestLabel</code>、<code>nearestDistance</code> 用于引导下一目标；<code>position</code>、<code>heading</code> 和 <code>geo</code> 同步相机位置与地图。<code>editorMode</code> 单独控制场景布置，与 running 不应同时作为训练执行状态。游戏控制器通过 <code>onState</code>、<code>onSignals</code> 和 <code>onEvent</code> 回调向页面发出变化，Vue 组件只更新展示，不应直接改动内部三维对象引用。</p>
+<h3>4.3 认证与页面状态</h3>
+<p>Pinia 认证 store 保存 user、accessToken 和 <code>idle → hydrating → ready</code> 的启动阶段。守卫调用 <code>hydrate()</code> 后决定是否跳转：未登录访问 requiresAuth 进入登录页，并记录重定向地址；非 admin 访问 admin 页面返回身份页；已登录访问 guestOnly 登录/注册页则按角色转到账户或管理首页。刷新失败时清理本地会话，不把可能已被禁用的本地用户快照当作永久有效凭证；真正的授权由后端查询当前数据库用户并校验角色。</p>
+<h3>4.4 状态矩阵与异常路径</h3>
+<table>
+<thead>
+<tr>
+<th>场景</th>
+<th>进入条件</th>
+<th>对用户可见的结果</th>
+<th>恢复路径</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>浏览器无已发布场景</td>
+<td>Dexie 列表为空</td>
+<td>学生页面空态，随机开始禁用</td>
+<td>同一浏览器教师设置目标并保存</td>
+</tr>
+<tr>
+<td>资源仍在加载</td>
+<td><code>ready=false</code></td>
+<td>场景初始化/加载状态</td>
+<td>等待资源加载或检查资源访问</td>
+</tr>
+<tr>
+<td>场景导入异常</td>
+<td>JSON 无效或对象键缺失</td>
+<td>Toast 提示失败</td>
+<td>重新选择有效场景文件</td>
+</tr>
+<tr>
+<td>登录失效</td>
+<td>访问令牌过期且无法刷新</td>
+<td>清理会话或引导登录</td>
+<td>重新登录</td>
+</tr>
+<tr>
+<td>AI 模型不可用</td>
+<td>注册表缺少可用模型</td>
+<td>服务端返回可识别错误</td>
+<td>选择可用模型或等待模型服务恢复</td>
+</tr>
+<tr>
+<td>数据库保存失败</td>
+<td>教师本地已保存，云端 API 返回错误</td>
+<td>明确显示本地已保存、云端未保存</td>
+<td>登录 teacher/admin 或排查 API 后重试</td>
+</tr>
+</tbody>
+</table>
+<h2>5. 教师场景编辑详细设计</h2>
+<h3>5.1 模型目录与对象创建</h3>
+<p>模型资源按轨道、信号、道岔、轨旁设施等类别组织。点击模型或把模型拖到画布时，页面读取 <code>catalogKey</code> 调用游戏控制器的 <code>addCatalogObject</code>；控制器查目录定义、加载对应 GLB 或构建回退视觉对象、分配对象 ID，随后把对象加入编辑组并发出 editor 事件。新对象继承目录默认缩放、交互属性、设备名称和任务默认值。找不到目录条目时显示警告；加载资源失败时允许回退占位并提示，不能把该占位视为实际资产已正常加载。</p>
+<h3>5.2 位姿编辑与输入校验</h3>
+<p>左侧属性面板只有选中对象时启用移动、旋转、缩放和删除按钮。移动按画布坐标修改 <code>position</code>，旋转步长从输入读取并限制在合理数值内，X/Y/Z 输入转换为 Number 后才写入控制器。界面中角度以度显示，控制器旋转使用弧度，边界需一致转换。删除只移除当前选中对象；“清空”会向用户二次确认，避免误删整个本地布置。拖拽鼠标和键盘快捷键在编辑模式下处理，不应把输入框中的字符当成场景操作。</p>
+<h3>5.3 巡检点与任务字段</h3>
+<p>模型 <code>inspectionPoint=true</code> 时被纳入学生的巡检任务。对象任务含 <code>title</code>、<code>description</code>、<code>faultType</code>、<code>expectedAction</code>、<code>score</code> 和 <code>hint</code>，模板默认标题为“检查设备名”、分值回退到 10。教师可把故障类型设为正常、信号灯异常、转辙机故障或设备箱异常；前端改变任务字段时调用 <code>updateSelectedTask</code> 并将对象标成可交互巡检点。字段仅控制仿真任务，不代表真实设备的监测数据。</p>
+<h3>5.4 场景保存的输入、处理和输出</h3>
+<p>输入包括场景名称、说明、难度（easy/normal/hard）、预计时间、发布选项和控制器导出的对象列表。保存先检查“发布且无巡检点”的非法组合，再调用 <code>serializeTrainingScene</code> 规范化为 <code>version=2</code>、<code>sceneName</code>、<code>savedAt</code>、<code>metadata</code>、<code>published</code>、<code>objects</code>、<code>tasks</code>。JSON 下载在首个异步 await 前触发，保留用户点击时的浏览器下载许可；随后写 Dexie。已登录 teacher/admin 继续调用服务端场景 upsert 和发布/下架，云端失败不伪装成功。本地与云端应分别查看成功提示，下载文件也不代表数据库必然落盘。</p>
+<h3>5.5 默认示范场初始化和版本保护</h3>
+<p><code>defaultTrainingScene.js</code> 从 <code>modelCatalog.js</code> 中已有 GLB 模型创建固定 ID <code>builtin-railway-inspection-v1</code>，共 13 个设备和人物对象、7 个巡检点。包括进站/出站信号机、道岔、转辙机、轨道电路设备箱、应答器、桥梁、站台、<code>man.glb</code> 和 <code>work_man.glb</code>。本地 <code>ensureDefaultTrainingScene</code> 先 get 再仅在缺失时 save；后端启动或 <code>seed:training</code> 使用 SQL <code>ON CONFLICT (id) DO NOTHING</code>，不会覆盖教师对同 ID 内容的保存。教师打开编辑器时载入本地默认对象；管理员或教师更新默认场后，云端发布内容优先供学生训练，网络失败时退回本地副本。种子不是对其他人的私有场景做批量替换。</p>
+<h3>5.6 场景导入与错误处理</h3>
+<p>“加载场景”读取本地文件文本，<code>parseTrainingScene</code> 首先使用 <code>JSON.parse</code>，检查 <code>objects</code> 为数组，再逐对象要求 <code>catalogKey</code>。缺失 name 时回退模型键，位置/旋转以 0 补轴，缩放以 1 补轴；任务分值从有效数字或默认值获得。解析完成切回编辑模式并把 objects 导入画布；异常时保持当前页面并显示警告。此路径只读文件内容，不把 JSON 字符串作为脚本执行。</p>
+<p><img alt="图 5-1 教师编辑到学生训练的状态流程" src="../images/diagrams/训练流程.svg" /></p>
+<p>图 5-1 状态流程。发布失败、保存、下载、学生列表、巡视和完成分别是不同状态；图中的本地保存不会沿箭头写入云端数据库。</p>
+<h2>6. 学生巡检训练详细设计</h2>
+<h3>6.1 本地任务列表与入口</h3>
+<p><code>StudentHub.vue</code> 首先确保本地固定 ID 默认场景存在，读取 Dexie 中已发布项，再尝试 GET 云端已发布列表并按 ID 合并，默认示范场置顶。按钮“进入默认实训”直接打开固定 ID；有多个场景时可“随机练习”，任务卡片仍保留“进入练习”。若 API 不可用，学生仍可在当前浏览器进入默认本地示范场；若教师在另一设备保存到云端，则学生列表优先显示云端元信息，加载完整内容时 GET 同 ID 的云端 payload。在线列表尚有分页上限，不能把任意大量历史任务承诺为一次性全部可见。</p>
+<h3>6.2 加载训练场景</h3>
+<p>训练页由路由参数 <code>sceneId</code> 确定场景，先 <code>GET /api/scenes/:id</code> 取已发布云端 payload；网络或服务异常时回退本浏览器 <code>getTrainingScene(id)</code>。若两处均找不到，提示“未找到该训练场景”。三维控制器先并发加载基础铁路、站台、信号与人物资源，再并发加载场景 GLB，按原对象顺序放入编辑组；控制器依据 <code>inspectionPoint</code> 建立 <code>signalRuntime</code>，任务初始 <code>inspected=false</code>。为符合参考看板的第三人称游览视角，训练人物复用项目现有 GLB，按包围盒归一到约 2.8 场景单位高，站在视线前方；机车同样按包围盒缩放并放到线路远端，避免遮挡人物。训练起点相对首个巡检点计算，重置也返回当前场景起点。</p>
+<h3>6.3 输入、相机和移动约束</h3>
+<p>控制器维护 <code>keys</code>、yaw、pitch、camera.position 与 <code>lastPosition</code>。前后左右输入合成方向向量，归一化后以普通速度 15 或奔跑速度 27 个场景单位/秒推进；相机 X、Z 被夹在 <code>WORLD_LIMITS</code>，Y 保持 <code>CAMERA_HEIGHT=3.6</code>。训练人物位于相机前方约 5 单位，随 yaw 转向，不在教师布置模式显示。鼠标指针锁定用于调整镜头，移动端方向键只在运行时出现。实际位移累加 distanceTravelled、速度换算为 km/h；头less 软件渲染可能导致帧率下降，但画面、目标、移动与附近设备需分别通过浏览器截图和像素检测验证。</p>
+<h3>6.4 巡检目标更新规则</h3>
+<p><code>updateSignals()</code> 每帧检查未完成目标与玩家的平面距离；距离大于 8 场景单位的不处理，进入范围时立即将目标标为已巡视，改变灯及环材质、可选播放提示音、发出 <code>signal</code> 事件并重新发送目标列表。当前这条运行链<strong>不弹出故障判断题、不要求按键确认、也没有根据 task.score 自动计算课程成绩</strong>。教师填写的 <code>faultType</code>、<code>expectedAction</code> 和分值在对象/JSON 中有记录，但不得把字段存在描述成运行时已实现的人工诊断评分。当前演示的检查规则是“接近自动巡视”。</p>
+<p><code>findNearbyEquipment()</code> 独立计算 14 单位范围内最近设备，包含已巡视点，返回 <code>id</code>、名称、目录键、任务标题/说明、距离和完成标志。这样进入 8 单位自动巡视范围之后，设备提问卡片仍能显示，不会在完成瞬间消失。卡片仅在训练运行中显示，匿名用户点击时进入登录流程；登录用户点击后，<code>equipmentContext</code> 与 <code>sceneContext</code> 一同进入助手。设备标题属于教师配置数据，提示词应当将其视为参考内容而非新的系统指令。</p>
+<h3>6.5 最近目标与终点完成条件</h3>
+<p><code>findNearest()</code> 从尚未巡视的目标中选择平面距离最近者；所有目标已巡视后改以 <code>STATION_POINT</code> 作为导航目标。<code>updatePhase()</code> 同时检查“已巡视数量等于目标总数”与“玩家距终点站台小于 14 场景单位”；仅满足前者时阶段为“返抵车站”，两者同时满足才设 <code>completed=true</code>、<code>running=false</code>，停止背景音乐并发送 <code>complete</code> 事件。学生不能只在巡检列表达到 100% 时就认为任务已经完成。若对象列表没有巡检点，发布环节已被教师端阻断；额外导入不符合业务要求的空场景时应按异常样本处理。</p>
+<h3>6.6 列车警告、暂停与重置</h3>
+<p>列车按 <code>trainCurve</code> 更新位置。训练开始超过 8 秒后，运行中玩家到列车平面距离小于 10、且距离上一警告超过 2200 毫秒时，健康值减 8、播放警告音并产生提示。该健康值为仿真状态，不等同真实身体检测。暂停设置 <code>running=false</code>，停止音乐并退出指针锁；重置清除 elapsed、distance、health、已巡视标记与完成状态，相机回到默认起点，信号材质恢复，随后可重新开始。重置不会清理数据库中另行保存的场景。</p>
+<h3>6.7 状态通知节流</h3>
+<p><code>emitState()</code> 默认每至少 80 毫秒发送一次快照，强制更新可跳过节流。状态快照除位置、geo、最近目标外，增加 <code>nearbyEquipment</code>，供对话卡片决定显隐；不直接暴露 Three.js 对象。<code>emitSignals()</code> 映射目标 id、标签、状态、坐标和是否已巡视。离开训练页时清理助手的场景及设备上下文，避免之后从别的页面提问时沿用上一个信号机。</p>
+<h2>7. 身份认证与账户详细设计</h2>
+<h3>7.1 注册与身份规则</h3>
+<p>注册路由先用 Zod 检查用户名长度 3–32、字符集、密码 8–72 且同时含字母与数字，邮箱和手机号分别有格式限制。默认 role 为 student；请求 admin 一律拒绝，teacher 仅在显式配置 <code>ALLOW_TEACHER_SELF_REGISTER</code> 时允许自注册。服务端检查用户名/邮箱/手机号是否已存在，写入密码哈希、生成用户 ID，并记审计。前端注册表单先检查密码规则与两次输入一致，再提交并尝试自动登录；客户端检查不能代替服务端校验。</p>
+<h3>7.2 登录错误与锁定</h3>
+<p><code>authService.login()</code> 根据用户名读含哈希的用户行；不存在、禁用、处于锁定期或密码错误均记录登录日志并返回对应错误。密码错误累计到配置阈值后账户进入 locked 状态并设置 locked_until，后续锁定期内直接拒绝，不再进行 BCrypt 运算。成功则清除失败计数、更新最近登录信息，签发访问及刷新令牌。登录路由同时对账号和来源 IP 施加不同层级限流，减轻单账号爆破和批量撞库；共享出口的教室环境也要考虑限流误伤。</p>
+<h3>7.3 访问令牌和刷新令牌</h3>
+<p>访问令牌包含 user id、username、role、<code>typ=access</code>、issuer 与到期时间；服务端每个需要授权的请求仍从数据库查询当前用户，检查 deleted_at、disabled 和 locked 状态。刷新令牌原文只返回客户端，<code>refresh_tokens</code> 存 sha256 哈希，记录 family_id、expires_at、revoked_at 和 replaced_by。轮换请求若再次使用已被替换的 token，会把同一家族的未撤销令牌全部吊销并拒绝继续访问。前端 HTTP 客户端把并发 401 汇聚为一个刷新 Promise，避免同一次过期引发多个并行换发、被误判为重放。</p>
+<h3>7.4 密码重置和统一身份</h3>
+<p>忘记密码可按账号标识发起请求，但项目默认不通过 SMTP/短信发送，用户需要管理员生成的一次性链接。重置 token 具有 expires_at 和 used_at；使用前预检有效期与使用状态，完成重置后吊销已有刷新令牌并要求重新登录。统一账号为另一路可选能力：OIDC 根据配置获取 issuer 元数据、使用 PKCE S256/state/nonce 建立短期事务，回调核验签名、issuer、audience 与 nonce，只允许事先登记的 redirect origin。统一身份绑定必须关联现有本地账户，不按用户名或邮箱自动合并。未配置 OIDC 时不能宣称该入口可用。</p>
+<h3>7.5 测试身份的隔离边界</h3>
+<p><code>test_admin</code>、<code>test_student</code> 是本机开发环境的辅助身份。只有 <code>NODE_ENV</code> 非 production 且显式开启 <code>DEV_TEST_LOGIN</code>，并通过实际回环监听的开发代理请求时才展示测试登录；生产环境不允许用这些身份换取会话。测试身份的数据不属于软件正常用户管理业务，不应作为申请表中的真实用户数或正式账号权限样本。</p>
+<h2>8. 云端场景、成绩和管理详细设计</h2>
+<h3>8.1 云端场景读取范围</h3>
+<p><code>GET /api/scenes</code> 默认返回已发布且未软删除的场景，<code>mine</code> 要求登录并限定 ownerId；<code>GET /api/scenes/:id</code> 取完整 payload 时仍检查 deleted_at/published，草稿仅作者或 admin 可读。学生列表现会合并此云端列表与 Dexie 场景，云端同 ID 元信息优先；进入训练时取云端完整 payload，断网再回退本地。默认示范场由服务器在启动时以固定 ID 播种且不覆盖已经保存的版本，因此学生首次访问即可选择该场景。</p>
+<h3>8.2 云端保存、发布和删除</h3>
+<p><code>POST /api/scenes</code> 必须携带 teacher/admin 身份，名称由 Zod 限定非空与最大长度，difficulty 限 easy/normal/hard。带 id 时先检查归属，若已有 owner_id 且不属于当前用户、请求者非 admin 则拒绝；通过后 upsert 并记 <code>scene.save</code> 审计。教师页面登录后调用该接口，接着调用 <code>/api/scenes/:id/publish</code> 并按 published 布尔值发布或下架。当前默认场景的种子记录 owner_id 为 NULL，登录教师可更新它；其他有 owner_id 的场景仍执行归属校验。云端失败时本地稿保持，界面出现“本地已保存，云端未保存”。删除仍是软删除。</p>
+<h3>8.3 成绩记录读写</h3>
+<p><code>POST /api/records</code> 需要认证，接受 sceneId、sceneName、score、elapsedSeconds、completed、inspectedCount、mistakeCount 和 payload 等字段，Zod 限制分数与耗时数值边界。userId 始终覆盖为 req.user.id，studentName 在缺失时从当前登录用户取值，避免前端把成绩冒记给其他用户。<code>GET /api/records</code> 非管理员只能查本人的记录；管理员可查询跨用户列表。该 API 的存在不代表当前浏览器自动接近巡检点时就向服务端提交评分，需以实际调用位置作为完成验证依据。</p>
+<h3>8.4 管理概览与分页机制</h3>
+<p><code>/api/admin</code> 路由先执行 requireAuth 和 requireRole('admin')，概览同时统计用户、角色、最近登录、场景、成绩、会话、消息和模型状态；模型服务异常时仅相关统计降级，不把 PostgreSQL 状态冒充模型健康。分页 <code>buildPageParams()</code> 把 page 转正整数、pageSize 限定上界，返回 limit/offset；<code>resolveSort()</code> 只从列白名单映射排序字段，不把用户字符串直接插入 SQL。列表以 <code>COUNT(*) OVER()</code> 提供 total_count；结果为空时无法从窗口计数得到总量，前端结合已知页信息处理越界。</p>
+<h3>8.5 管理操作与已知界面缺口</h3>
+<p>管理路由涵盖用户开通/禁用/解锁、管理员重置链接、场景发布/下架/软删除、成绩、AI 会话与请求日志、模型和系统设置。此前共享 <code>AdminTable.vue</code> 读取未定义的 sort/order 导致列表空白，现已将表格排序指示改为从组件 props 读取。本次用授权测试管理员在浏览器逐页看到九个管理栏目，并采集场景列表、AI 调用日志等真实截图；并不以“页面可见”代替所有危险写操作已实测。</p>
+<h2>9. AI 对话与语音详细设计</h2>
+<h3>9.1 模型注册表和可用性</h3>
+<p>AI 路由在 <code>/api/ai</code> 下统一要求登录。<code>GET /models</code> 返回当前模型列表；助手打开时优先选可用且名称包含 DeepSeek 的模型，若不可用才采用服务端默认或第一项，用户也可下拉改选。当前测试环境实际显示 <code>deepseek-r1:14b</code> 作为优先项，但其是否能及时回应依赖上游资源；记录功能由较轻量的可用模型完成实测，不把测试回复冒称 DeepSeek 生成。embedding 模型不能用于聊天，模型缺失时返回错误。</p>
+<h3>9.2 流式对话的输入验证</h3>
+<p>对话请求接受 conversationId、message、model、sceneContext、<code>equipment:{id,name}</code> 和受限数值 options。message 非空、最大 8000 字符；sceneContext 最大 2000 字符，设备 ID 与名称各不超过 120 字符；options.temperature/top_p/num_predict 各有范围。续聊先核对 conversation.user_id。新对话标题由问题前 30 字生成，用户消息写入时同时保存 scene_context 和 equipment_context，再取最近 20 条历史、把场景说明与系统提示组合后交模型服务。本次测试问题的设备 ID 和名称已在数据库 <code>ai_messages</code> 中核对，回复也有独立消息记录。</p>
+<h3>9.3 NDJSON 帧与中断</h3>
+<p>开始流后先写 <code>meta</code> 控制帧，携带 conversationId、model、userMessageId；上游给出 thinking 而暂时没有正文时只通知一次 <code>thinking</code>，随后逐帧传递增量内容。收到结束帧时记录 token 用量与时延并完成助手消息。若模型服务启动流前失败，先记录 status=error 的助手消息，再发 <code>error</code> 帧、结束响应并写调用日志；客户端主动断开时取消上游 reader，避免持续占用连接。浏览器 store 分别维护 streaming、partial、thinking 和 error，不把未收到 done 的片段显示成最终完整回答。</p>
+<h3>9.4 语音能力分层</h3>
+<p>客户端语音路由按 Android 桥接、Web Speech 与仅朗读/文字输入的能力选择会话；语音识别不可用并不影响文字提问。语音模式有 off、tts、full，full 需要设备支持相应语音识别权限和安全上下文，不能仅靠软件安装便认定可使用。此能力与 AI 模型可用性是不同前提；本次缺少可信的模型回复与 Android 真机采集证据，手册保留这部分待验收说明。</p>
+<h2>10. 数据模型与持久化设计</h2>
+<h3>10.1 浏览器数据库版本与记录结构</h3>
+<p><code>trainingSceneDb.js</code> 创建名为 <code>railway-signal-runner</code> 的 Dexie 数据库。版本 1 的 scenes 主键为 id，索引 name、updatedAt、createdAt；版本 2 补充 published 索引；records 使用 id、sceneId、createdAt。首次进入教师或学生端时 <code>ensureDefaultTrainingScene()</code> 先查询固定 ID，存在则保留教师版本、缺失才写示范场。<code>saveTrainingScene(scene)</code> 为普通新场景生成 nanoid，保留 createdAt 并更新 updatedAt；云端存储成功与否由另一请求明确反馈。当前 Dexie 没有独立 sceneArchives 表，导出 JSON 不等于自动历史版本。</p>
+<h3>10.2 场景文件的数据字典</h3>
+<table>
+<thead>
+<tr>
+<th>字段</th>
+<th>类型与来源</th>
+<th>规范化规则</th>
+<th>使用位置</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>version</td>
+<td>整数；当前为 2</td>
+<td>旧导入文件缺失时按 1 解释</td>
+<td>场景文件识别</td>
+</tr>
+<tr>
+<td>sceneName</td>
+<td>字符串；教师输入</td>
+<td>未命名导入场景有回退名称</td>
+<td>列表与标题</td>
+</tr>
+<tr>
+<td>savedAt</td>
+<td>ISO 日期字符串</td>
+<td>导出时取当前时间</td>
+<td>JSON 追溯</td>
+</tr>
+<tr>
+<td>metadata.description</td>
+<td>字符串</td>
+<td>缺失为空串</td>
+<td>场景说明</td>
+</tr>
+<tr>
+<td>metadata.difficulty</td>
+<td>easy/normal/hard</td>
+<td>缺失按 normal</td>
+<td>学生难度标签</td>
+</tr>
+<tr>
+<td>metadata.estimatedMinutes</td>
+<td>数字</td>
+<td>转换失败按 10</td>
+<td>学生预计时长</td>
+</tr>
+<tr>
+<td>published</td>
+<td>布尔值</td>
+<td>布尔转换</td>
+<td>本地任务列表筛选</td>
+</tr>
+<tr>
+<td>objects</td>
+<td>对象数组</td>
+<td>每项必须有 catalogKey</td>
+<td>3D 对象恢复</td>
+</tr>
+<tr>
+<td>tasks</td>
+<td>巡检点任务数组</td>
+<td>缺失时从 objects 构建</td>
+<td>巡检目标信息</td>
+</tr>
+</tbody>
+</table>
+<p><code>normalizeObject</code> 对 position、rotation、scale 各补 x/y/z 三轴。位置和旋转默认值为 0、缩放默认值为 1；缺 id 时由 catalogKey、时间戳和序号组合生成。任务 title 缺失时使用“检查设备名”，description 缺失时使用“靠近目标设备后完成巡检确认”，faultType 默认 normal，expectedAction 默认 inspect，score 使用有限数值或 10。这些默认值用于保存与复原，不证明当前训练运行时会展示评分判断 UI。</p>
+<h3>10.3 用户、令牌与审计表</h3>
+<p><code>users</code> 使用文本 ID、username、display_name、password_hash、role、status、failed_login_count、locked_until、last_login_at、deleted_at 等字段。role 的 CHECK 限 student、teacher、admin；status 限 active、disabled、locked。未软删除的用户名/邮箱/手机号有部分唯一索引，支持软删除后按定义重新注册。<code>refresh_tokens</code> 通过 user_id 关联 users，保存 token_hash、family_id、expires_at、revoked_at 与 replaced_by；重置令牌有 channel、issued_by、used_at 及有效期。<code>login_logs</code> 记录成功标志与失败原因，<code>audit_logs</code> 记录 action、target_type、target_id、detail。用户界面不能查询密码哈希或刷新令牌原文。</p>
+<h3>10.4 云端场景和训练记录</h3>
+<p><code>training_scenes</code> 使用文本 id、name、JSONB payload、owner_id、published、published_at、description、difficulty、deleted_at、created_at、updated_at。owner_id 删除用户后置空，场景软删除使用 deleted_at；published 索引服务于学生公开查询，owner 索引服务于本人草稿列表。<code>training_records</code> 包含 scene_id、user_id、scene_name、student_name、score、elapsed_seconds、completed、inspected_count、mistake_count 和 JSONB payload。score、耗时在 API 层校验，若前端没有调用该接口，不会因为学生列表有任务就自动创建服务器成绩行。</p>
+<h3>10.5 AI 会话及系统设置</h3>
+<p><code>ai_conversations</code> 以 user_id 归属账户，记录 title、model、system_prompt、message_count、last_message_at、archived。<code>ai_messages</code> 通过 conversation_id 关联会话，role CHECK 限 system/user/assistant；编号迁移 <code>009_ai_equipment_context.sql</code> 为用户消息加入 scene_context TEXT 与 equipment_context JSONB。后台问答实测用户消息关联 <code>default-equipment-1</code>、设备名“进站信号机”，助手回复另有 status=ok 行。<code>ai_request_logs</code> 留存模型名、端点、耗时及错误，conversation_id 故意不设外键，使会话被删除后日志仍保留。<code>system_settings</code> 存 key/value JSONB 与更新者。</p>
+<h3>10.6 迁移与完整性</h3>
+<p><code>schema_migrations</code> 记录 version、checksum 与 applied_at。迁移器按编号处理基线和 <code>008</code>、<code>009</code> 等 SQL；已应用版本比较 SHA-256，文件被修改就拒绝继续，新增迁移在事务和 advisory lock 中执行。<code>009</code> 涉及已存在表的 ALTER TABLE，受限运行账号不是表所有者时会失败并回滚；由表所有者核对权限后执行并登记相同 checksum，运行账号下一次检查返回无需重复迁移。默认场景写入是独立的固定 ID 幂等 INSERT，不和 ALTER 混成数据破坏操作。数据库备份脚本使用 PostgreSQL custom dump 与 AES-256-GCM。</p>
+<h2>11. 接口设计</h2>
+<p>本文档中只列出关键业务接口。路径均相对于 <code>/api</code>，主机地址统一写为 <code>***</code>；本地场景保存与服务端场景写入在教师认证前后有不同执行条件，不能以单张按钮截图代替两处写入验证。</p>
+<h3>11.1 认证与会话接口</h3>
+<table>
+<thead>
+<tr>
+<th>方法及路径</th>
+<th>调用条件和请求字段</th>
+<th>响应或失败分支</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>POST <code>/auth/register</code></td>
+<td>username、password、可选 displayName/email/phone/role</td>
+<td>返回公开用户；用户名冲突、弱密码或请求 admin 拒绝</td>
+</tr>
+<tr>
+<td>POST <code>/auth/login</code></td>
+<td>username、password</td>
+<td>成功返回 user/accessToken/refreshToken/expiresIn；禁用或锁定拒绝</td>
+</tr>
+<tr>
+<td>POST <code>/auth/refresh</code></td>
+<td>refreshToken</td>
+<td>换发新令牌；旧令牌重放触发家族吊销</td>
+</tr>
+<tr>
+<td>POST <code>/auth/logout</code></td>
+<td>当前会话、可选 all</td>
+<td>吊销指定或全部会话</td>
+</tr>
+<tr>
+<td>GET <code>/auth/me</code></td>
+<td>Bearer token</td>
+<td>返回当前公开用户；账号停用拒绝</td>
+</tr>
+<tr>
+<td>POST <code>/auth/forgot-password</code></td>
+<td>account</td>
+<td>统一返回已接收信息以降低账号枚举风险</td>
+</tr>
+<tr>
+<td>GET <code>/auth/reset-password/:token</code></td>
+<td>一次性 token</td>
+<td>返回有效状态；已使用/过期拒绝</td>
+</tr>
+<tr>
+<td>POST <code>/auth/reset-password</code></td>
+<td>token、新密码</td>
+<td>密码重置并撤销旧会话</td>
+</tr>
+</tbody>
+</table>
+<p>统一身份还提供 <code>/auth/oidc/config</code>、<code>start</code>、<code>callback</code>、<code>status</code>。只有服务端配置 issuer、client ID 和已登记回调地址时可启用；OIDC 入口没有配置时不作为本地密码登录的替代保证。开发专用 <code>/auth/dev-login</code> 仅用于本机测试，生产模式不开放，不能在申报材料中作为通用用户功能。</p>
+<h3>11.2 场景与成绩接口</h3>
+<table>
+<thead>
+<tr>
+<th>方法及路径</th>
+<th>输入/身份</th>
+<th>正常结果</th>
+<th>边界与错误</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GET <code>/scenes</code></td>
+<td>published、mine、q、page、pageSize</td>
+<td>默认发布列表或本人列表</td>
+<td>mine 未登录拒绝</td>
+</tr>
+<tr>
+<td>GET <code>/scenes/:id</code></td>
+<td>id；匿名或登录</td>
+<td>场景元数据和 payload</td>
+<td>草稿非作者/管理员拒绝</td>
+</tr>
+<tr>
+<td>POST <code>/scenes</code></td>
+<td>name、difficulty、payload；teacher/admin</td>
+<td>201 和场景 ID</td>
+<td>同名或归属规则依当前服务实现；更新别人场景拒绝</td>
+</tr>
+<tr>
+<td>POST <code>/scenes/:id/publish</code></td>
+<td>published；teacher/admin</td>
+<td>发布状态及审计</td>
+<td>不存在/已删除/非所有者拒绝</td>
+</tr>
+<tr>
+<td>DELETE <code>/scenes/:id</code></td>
+<td>id；teacher/admin</td>
+<td>软删除成功</td>
+<td>所有权或状态不符拒绝</td>
+</tr>
+<tr>
+<td>GET <code>/records</code></td>
+<td>分页、sceneId、mine；登录</td>
+<td>本人成绩或管理员列表</td>
+<td>非管理员不能查其他用户</td>
+</tr>
+<tr>
+<td>POST <code>/records</code></td>
+<td>sceneId、score、elapsedSeconds、payload；登录</td>
+<td>201 和记录 ID</td>
+<td>userId 由服务器覆盖；输入超界拒绝</td>
+</tr>
+</tbody>
+</table>
+<p>例如 <code>POST http://***:8038/api/scenes</code> 可带 <code>{"id":"builtin-railway-inspection-v1","name":"站场信号设备巡检示范场","difficulty":"easy","payload":{"objects":[]}}</code>。真实请求中的 objects 由编辑器完整导出；这里的空数组仅用于表示字段形状，不是可发布的教学任务。服务端核对 teacher/admin 后检查已有场景归属，保存及记审计。设备问答请求的 <code>equipment</code> 示例为 <code>{"id":"default-equipment-1","name":"进站信号机"}</code>，与 sceneContext 一并落在用户消息行。</p>
+<h3>11.3 智能体和管理接口</h3>
+<p><code>GET /ai/models</code> 返回可用模型列表，<code>POST /ai/chat</code> 用 NDJSON 响应；请求除 message 外，可选 conversationId/model/sceneContext/equipment/options。客户端逐行解析 <code>meta</code>、<code>thinking</code>、<code>done</code>、<code>error</code> 控制帧。用户消息持久化包含设备 ID、名称与场景文本，助手回复存为独立消息；本次真实低资源测试已核对两行消息。会话读取和删除仍按用户归属校验。管理概览 <code>/admin/stats</code> 返回用户、场景、成绩、会话、消息和模型统计；管理员的场景列表可看到云端默认示范场及发布时间，不因本地浏览器离线而消失。</p>
+<h3>11.4 HTTP 返回与错误语义</h3>
+<p>服务端按 JSON 错误信封携带 ok、code、message；HTTP 400 主要表示参数和 JSON 不符合要求，401 为未登录或令牌无效，403 为角色/归属拒绝，404 为对象不存在，429 表示限流，502/503 表示上游或服务依赖不可用。浏览器请求层将状态与 code 转成 ApiError；401 可尝试共享刷新 Promise，刷新失败才统一清会话。前端 toast 显示业务结果，但错误提示的出现不代表数据库操作已回滚，具体状态由对应接口响应决定。</p>
+<h2>12. 部署、运维和恢复设计</h2>
+<h3>12.1 首次初始化与启动</h3>
+<p>运行配置由 <code>server/.env</code> 或进程环境变量提供，模板 <code>server/env.example</code> 只给字段名称。Web 使用 <code>npm run dev</code>、构建使用 <code>npm run build</code>；服务端 <code>npm run api</code>，初始化/迁移分别为 <code>npm run db:init</code> 和 <code>npm run db:migrate</code>。PostgreSQL 目标库由维护者先准备；初始化脚本执行 schema 与迁移，不凭脚本示例推断已经创建数据库或具备权限。项目默认 Web 端口 4029、API 端口 8038；实际部署改端口后需核对 Vite <code>/api</code> 代理目标与浏览器可访问性。</p>
+<h3>12.2 启动检查和依赖降级</h3>
+<p>启动后先请求 <code>/api/health</code> 核对数据库及模型服务状态，再使用浏览器查看身份页、学生列表、教师画布和需要授权的管理页面。若 PostgreSQL 不可用，匿名本地 IndexedDB 路径仍可能工作，但登录和云端写操作失败；若模型服务不可用，聊天应显示错误或模型列表不可用，不应影响本地场景保存。WebGL 不支持、GLB 请求失败和地图瓦片失效需分别识别，不能把其中一项失败概括为“服务器离线”。</p>
+<h3>12.3 备份、恢复和审计</h3>
+<p>项目 <code>db:backup</code> 输出自定义格式的 PostgreSQL 快照并以 AES-256-GCM 加密，所需密钥必须在独立受限环境配置；恢复脚本要求目标数据库不同于源库、名称以 <code>_test</code> 结尾，并显式 <code>--replace</code>，先验证身份认证标签再执行事务级恢复。该工具只处理数据库，不覆盖浏览器 IndexedDB 数据；教师页面下载 JSON 可作为单场景文件备份。生产恢复前需人工核对目标库及现有备份，不在软著材料附真实连接凭据。</p>
+<h3>12.4 跨平台条件</h3>
+<p>Web 客户端运行受浏览器和 WebGL 支持影响，服务端需要兼容当前 Node 项目依赖的运行时与 PostgreSQL 版本。项目另有 Android Gradle 工程和语音桥接代码，但该工程的真机权限、麦克风及构建签名需要独立验证。软著文档生成脚本可在具备 Python 3.10+、中文字体、Chromium 和 Poppler 的 Windows/Linux 环境运行；此点与软件本身的跨平台实测不能混为一谈。</p>
+<h2>13. 安全与权限设计</h2>
+<h3>13.1 认证与授权边界</h3>
+<p>Hash 路由的 <code>meta.roles</code> 和 <code>requiresAuth</code> 是导航层保护，用户可以直接构造 HTTP 请求，因此后端每次用 <code>requireAuth</code> 解析令牌并重新查用户，<code>requireRole</code> 执行角色白名单，场景路由再检查 <code>owner_id</code>。所有权异常不靠隐藏按钮解决。管理员账号不能通过注册接口自助创建；修改账号状态后旧令牌下次请求仍会回库核验。</p>
+<h3>13.2 密码、令牌与日志</h3>
+<p>账户密码只保存哈希，登录成功后返回令牌；刷新令牌原文只交客户端、库内只存哈希，重放使整条家族失效。密码修改或重置后的会话撤销用于防止旧设备继续访问。登录日志及审计日志记录动作和结果，但不应记录密码、JWT 明文或完整敏感请求体。软著交付的截图、图表和接口示例均用脱敏副本与主机占位符。</p>
+<h3>13.3 输入、滥用与数据隔离</h3>
+<p>Express JSON 请求体有限制，Zod 对注册、登录、场景和 AI 字段提供服务端格式校验；SQL 查询使用参数化占位符，排序列由白名单决定。登录、注册、找回密码及 AI 聊天有针对账户/IP/用户的限流；AI 会话需核对 user_id。浏览器 IndexedDB 仅按浏览器资料隔离，不是服务端账号级权限系统；在多人共用同一浏览器资料时，本地场景可能互相可见。CORS 白名单与同源代理用于限制跨源请求，但不能替代业务鉴权。</p>
+<h2>14. 测试与验证</h2>
+<h3>14.1 自动化验证范围</h3>
+<p><code>npm test</code> 运行 Node 自测，包含 API 基础错误信封、参数拒绝、数据库迁移顺序和校验、OIDC 回调状态、备份密钥与隔离恢复等。PostgreSQL API 集成测试需要名称以 <code>_test</code> 结尾的专用数据库，并在显式变量启用后才运行；在未启用环境不得把其 SKIP 视为通过。<code>npm run build</code> 检查 Vue/Vite 打包和静态引用，构建成功不证明浏览器所有页面都已正确渲染。</p>
+<h3>14.2 真实浏览器操作链</h3>
+<p>在当前本机测试环境中，固定 ID 示例已在本地和 PostgreSQL 写入。实际链路为：学生首次进入看到默认实训 → 载入 7 个巡检目标与居中人物 → 进入首个信号机周围出现设备卡片 → 登录后打开设备助手且 DeepSeek 自动成为可用首选 → 使用小模型发送测试问题 → 数据库保存用户消息、设备关联及回复。另一路为管理员登录教师页面、加载 13 个对象、点“保存场景”更新云端发布时间、在管理员场景列表查到已发布记录。训练全任务完成与返抵终点尚无实拍，不伪造完成状态。</p>
+<h3>14.3 测试矩阵与预期</h3>
+<table>
+<thead>
+<tr>
+<th>场景/前提</th>
+<th>操作</th>
+<th>预期结果</th>
+<th>本次证据状态</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>发布无巡检点</td>
+<td>教师保存 published 场景</td>
+<td>警告且不进入本地保存</td>
+<td>代码路径已核对</td>
+</tr>
+<tr>
+<td>首次进入学生端</td>
+<td>幂等加载默认示范场</td>
+<td>默认实训置顶及直接进入按钮</td>
+<td>浏览器实拍、数据库记录</td>
+</tr>
+<tr>
+<td>导入缺 objects 的 JSON</td>
+<td>选择文件</td>
+<td>报结构错误，不导入</td>
+<td>序列化逻辑已核对</td>
+</tr>
+<tr>
+<td>已登录 admin</td>
+<td>访问管理概览</td>
+<td>返回统计视图</td>
+<td>浏览器实拍</td>
+</tr>
+<tr>
+<td>非 admin</td>
+<td>调用管理接口</td>
+<td>角色检查拒绝</td>
+<td>API 规则已核对</td>
+</tr>
+<tr>
+<td>管理列表</td>
+<td>访问九个管理员栏目</td>
+<td>页面显示真实表格/过滤器</td>
+<td>修复后逐页实拍，未执行危险删除</td>
+</tr>
+<tr>
+<td>设备接近</td>
+<td>移动到进站信号机</td>
+<td>设备名称、距离及询问入口出现</td>
+<td>浏览器实拍</td>
+</tr>
+<tr>
+<td>设备问答</td>
+<td>登录后向模型发送问题</td>
+<td>数据库保存问题、回复及设备上下文</td>
+<td>实际记录查询，测试回复非 DeepSeek</td>
+</tr>
+<tr>
+<td>模型服务不可用</td>
+<td>发起问答</td>
+<td>返回错误帧/提示</td>
+<td>代码路径已核对</td>
+</tr>
+<tr>
+<td>训练所有点已巡视且返抵站台</td>
+<td>进入终点范围</td>
+<td><code>completed=true</code></td>
+<td>代码路径已核对，未采完成态</td>
+</tr>
+</tbody>
+</table>
+<h3>14.4 已知缺口与复核条件</h3>
+<p>共享表格 <code>sort</code> 引用错误和全局助手入口的模板 <code>window</code> 读取错误已修复，本次管理员列表、训练视图使用修复后的新截图。DeepSeek 是本机可用首选，但数据库核对的真实测试回复来自轻量模型，不能在材料中混称来源。密码重置令牌完整链、全任务完成、Android/Windows 真机尚无全部证据；著作权人、开发时间、正式登记版本仍待确认。</p>
+<h2>15. 结论与待确认事项</h2>
+<p>本说明书按当前代码说明亮色第三人称示范场、浏览器/云端双路径保存、设备接近提示、AI 消息的设备关联、认证权限和训练完成条件，区分真实经过验收的操作与尚待证据的状态。它不能代替正式登记版本选定、申请主体证明及 Android/Windows 真机复核，最终提交前仍需逐项确认。</p></main></body></html>

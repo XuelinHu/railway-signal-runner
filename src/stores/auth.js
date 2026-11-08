@@ -86,6 +86,13 @@ export const useAuthStore = defineStore('auth', () => {
     return data.user
   }
 
+  async function devLogin(role) {
+    const data = await authApi.devLogin(role)
+    applySession(data)
+    status.value = 'ready'
+    return data.user
+  }
+
   async function register(payload) {
     await authApi.register(payload)
     // 注册成功后直接登录，省掉一次手动输入。
@@ -135,6 +142,7 @@ export const useAuthStore = defineStore('auth', () => {
     setSignedOutHandler,
     hydrate,
     login,
+    devLogin,
     register,
     logout,
     updateProfile,

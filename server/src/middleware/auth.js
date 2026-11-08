@@ -1,6 +1,8 @@
 import { verifyAccessToken } from '../services/tokenService.js'
 import { queryOne } from '../db/pool.js'
 import { forbidden, unauthorized } from '../utils/httpError.js'
+import { config } from '../config.js'
+import { isDevTestAccount } from '../services/devTestAccounts.js'
 
 function extractBearer(req) {
   const header = req.headers.authorization
@@ -26,6 +28,7 @@ async function loadUser(req) {
   )
 
   if (!user || user.deleted_at) throw unauthorized('账号不存在或已注销', 'account_missing')
+  if (isDevTestAccount(user) && !config.auth.devTestLogin) throw forbidden('测试账号仅限开发环境', 'dev_account_disabled')
   if (user.status === 'disabled') throw forbidden('账号已被禁用，请联系管理员', 'account_disabled')
   if (user.status === 'locked') throw forbidden('账号已被锁定，请联系管理员解锁', 'account_locked')
 

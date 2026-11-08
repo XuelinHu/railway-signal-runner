@@ -139,6 +139,10 @@ const chatSchema = z.object({
   message: z.string().min(1, '请输入内容').max(8000, '内容过长'),
   // 游戏内场景上下文，用于让模型知道学生当前在做什么
   sceneContext: z.string().max(2000).optional().nullable(),
+  equipment: z.object({
+    id: z.string().min(1).max(120),
+    name: z.string().min(1).max(120),
+  }).optional(),
   options: z
     .object({
       temperature: z.number().min(0).max(2).optional(),
@@ -153,7 +157,7 @@ aiRouter.post(
   rateLimit({ ...config.rateLimit.chat, keyPrefix: 'ai-chat', byUser: true }),
   validate({ body: chatSchema }),
   async (req, res, next) => {
-    const { conversationId, message, sceneContext, options } = req.validated.body
+    const { conversationId, message, sceneContext, equipment, options } = req.validated.body
 
     let registry
     try {
@@ -201,6 +205,8 @@ aiRouter.post(
       role: 'user',
       content: message,
       model,
+      sceneContext: sceneContext || null,
+      equipment,
     })
 
     const history = await conversations.recentMessages(conversation.id, 20)

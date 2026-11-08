@@ -252,9 +252,11 @@
 
 .auth-page {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: 100vh;
+  height: 100vh;
+  overflow-y: auto;
   padding: 40px 20px;
   background:
     radial-gradient(900px 500px at 15% -10%, rgba(97, 217, 255, 0.12), transparent 60%),
@@ -266,6 +268,7 @@
   position: relative;
   width: 100%;
   max-width: 420px;
+  flex: 0 0 auto;
   padding: 30px 30px 24px;
   border: 1px solid var(--rsr-border);
   border-radius: var(--rsr-radius-lg);
@@ -311,6 +314,34 @@
   margin-top: 4px;
 }
 
+.dev-login-options {
+  display: grid;
+  gap: 10px;
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--rsr-border);
+  color: var(--rsr-muted);
+  font-size: 13px;
+}
+
+.dev-login-options > div {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.dev-login-options button {
+  min-width: 0;
+}
+
+.agent-equipment-context {
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--rsr-border);
+  background: #e7f2e9;
+  color: #254638;
+  font-size: 13px;
+}
+
 .auth-links {
   display: flex;
   align-items: center;
@@ -336,6 +367,23 @@
   font-size: 12.5px;
   line-height: 1.75;
   color: var(--rsr-muted);
+  text-align: center;
+}
+
+@media (max-width: 520px) {
+  .auth-page {
+    justify-content: safe center;
+    padding: 20px 12px;
+  }
+
+  .auth-card {
+    padding: 24px 20px;
+  }
+
+  .auth-footnote {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+  }
 }
 
 /* 密码规则实时校验 */

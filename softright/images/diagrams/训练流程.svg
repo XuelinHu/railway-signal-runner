@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="870" viewBox="0 0 720 870">
+  <rect width="720" height="870" fill="#fff"/>
+  <defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10Z" fill="#272d2c"/></marker></defs>
+  <g font-family="Noto Sans CJK SC, sans-serif" font-size="18" text-anchor="middle">
+    <rect x="170" y="25" width="380" height="60" rx="5" fill="#29634e"/><text x="360" y="63" fill="white">教师选择模型，设置位姿和任务</text>
+    <rect x="170" y="145" width="380" height="60" rx="5" fill="#29634e"/><text x="360" y="183" fill="white">检查巡检点与发布状态</text>
+    <path d="M360 255l143 57-143 57-143-57z" fill="#f4e9d5" stroke="#8a6230" stroke-width="2"/>
+    <text x="360" y="318" fill="#232323">已设巡检点？</text>
+    <rect x="170" y="416" width="380" height="62" rx="5" fill="#dcebe3" stroke="#29634e"/><text x="360" y="455" fill="#183b30">Dexie 本地保存 + 导出 JSON</text>
+    <rect x="170" y="540" width="380" height="62" rx="5" fill="#dcebe3" stroke="#29634e"/><text x="360" y="580" fill="#183b30">学生查看已发布场景并进入</text>
+    <rect x="170" y="664" width="380" height="62" rx="5" fill="#dcebe3" stroke="#29634e"/><text x="360" y="703" fill="#183b30">开始巡视、接近目标、确认任务</text>
+    <rect x="170" y="788" width="380" height="62" rx="5" fill="#f3e5df" stroke="#984c3a"/><text x="360" y="827" fill="#793c31">完成状态 / 重置继续练习</text>
+    <rect x="24" y="278" width="132" height="67" rx="5" fill="#f3e5df" stroke="#984c3a"/><text x="90" y="316" fill="#793c31">阻断发布</text>
+  </g>
+  <g fill="none" stroke="#272d2c" stroke-width="2" marker-end="url(#a)"><path d="M360 85v53"/><path d="M360 205v49"/><path d="M360 369v42"/><path d="M217 312h-55"/><path d="M360 478v56"/><path d="M360 602v56"/><path d="M360 726v56"/></g>
+  <g font-family="Noto Sans CJK SC, sans-serif" font-size="15" fill="#29372e"><text x="381" y="397">是</text><text x="177" y="300">否</text></g>
+</svg>

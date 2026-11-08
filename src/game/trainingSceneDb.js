@@ -1,5 +1,6 @@
 import Dexie from 'dexie'
 import { nanoid } from 'nanoid'
+import { createDefaultTrainingScene, DEFAULT_TRAINING_SCENE_ID } from './defaultTrainingScene.js'
 
 export const trainingSceneDb = new Dexie('railway-signal-runner')
 
@@ -37,6 +38,11 @@ export async function listPublishedTrainingScenes() {
 
 export function getTrainingScene(id) {
   return trainingSceneDb.scenes.get(id)
+}
+
+export async function ensureDefaultTrainingScene() {
+  const existing = await getTrainingScene(DEFAULT_TRAINING_SCENE_ID)
+  return existing || saveTrainingScene(createDefaultTrainingScene())
 }
 
 export async function deleteTrainingScene(id) {

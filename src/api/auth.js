@@ -5,6 +5,8 @@ const publicOptions = { skipAuth: true }
 export const authApi = {
   register: (payload) => http.post('/auth/register', payload, publicOptions),
   login: (payload) => http.post('/auth/login', payload, publicOptions),
+  devLoginConfig: () => http.get('/auth/dev-login/config', publicOptions),
+  devLogin: (id) => http.post('/auth/dev-login', { id }, publicOptions),
   logout: (payload = {}) => http.post('/auth/logout', payload),
   me: () => http.get('/auth/me'),
   oidcConfig: () => http.get('/auth/oidc/config', publicOptions),

@@ -8,12 +8,32 @@ import * as authService from '../services/authService.js'
 import { rotateRefreshToken, signAccessToken } from '../services/tokenService.js'
 import { toPublicUser } from '../services/authService.js'
 import { pool } from '../db/pool.js'
-import { HttpError } from '../utils/httpError.js'
+import { HttpError, forbidden } from '../utils/httpError.js'
 import { insertAuditLog } from '../repositories/logRepository.js'
 import * as users from '../repositories/userRepository.js'
 import { exchangeOidcCode, oidcEnabled, startOidc, takeOidcTransaction } from '../services/oidcService.js'
+import { isLocalDevRequest, listDevTestAccounts, loginAsDevTestAccount } from '../services/devTestAccounts.js'
 
 export const authRouter = Router()
+
+authRouter.get('/dev-login/config', (req, res) => {
+  res.setHeader('Cache-Control', 'no-store')
+  res.json({ enabled: isLocalDevRequest(req), accounts: isLocalDevRequest(req) ? listDevTestAccounts() : [] })
+})
+
+authRouter.post('/dev-login',
+  validate({ body: z.object({ id: z.string().max(64) }) }),
+  async (req, res, next) => {
+    if (!isLocalDevRequest(req)) return next(forbidden('测试登录仅限本机开发环境', 'dev_login_disabled'))
+    try {
+      const result = await loginAsDevTestAccount(req.validated.body.id, ctx(req))
+      res.setHeader('Cache-Control', 'no-store')
+      res.json({ ok: true, ...result })
+    } catch (error) {
+      next(error)
+    }
+  }
+)
 
 authRouter.get('/oidc/config', (_req, res) => res.json({ enabled: oidcEnabled() }))
 

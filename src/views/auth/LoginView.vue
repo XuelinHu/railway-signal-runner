@@ -15,6 +15,10 @@ const error = ref('')
 const submitting = ref(false)
 const oidcLoading = ref(false)
 const oidcEnabled = ref(false)
+const devLoginEnabled = ref(false)
+const devLoginId = ref('')
+const devLoginAccounts = ref([])
+const localBrowser = import.meta.env.DEV && ['localhost', '127.0.0.1', '[::1]'].includes(window.location.hostname)
 
 // 登录成功后回到被拦截的页面；redirect 由路由守卫写入。
 const redirect = computed(() => (typeof route.query.redirect === 'string' ? route.query.redirect : '/'))
@@ -24,6 +28,7 @@ const justReset = computed(() => route.query.reset === '1')
 onMounted(() => {
   if (auth.isAuthenticated) router.replace(redirect.value)
   authApi.oidcConfig().then((value) => { oidcEnabled.value = Boolean(value.enabled) }).catch(() => {})
+  if (localBrowser) authApi.devLoginConfig().then((value) => { devLoginEnabled.value = Boolean(value.enabled); devLoginAccounts.value = value.accounts || [] }).catch(() => {})
   const oidcError = sessionStorage.getItem('rsr.oidcError')
   if (oidcError) {
     sessionStorage.removeItem('rsr.oidcError')
@@ -40,6 +45,29 @@ async function submit() {
     router.replace(redirect.value)
   } catch (err) {
     error.value = err?.message || '登录失败，请稍后重试'
+  } finally {
+    submitting.value = false
+  }
+}
+
+function selectDevAccount(id) {
+  const account = devLoginAccounts.value.find((item) => item.id === id)
+  if (account) { username.value = account.username; password.value = account.password }
+}
+
+async function quickLogin() {
+  if (submitting.value || !devLoginEnabled.value || !devLoginId.value) return
+  error.value = ''
+  const account = devLoginAccounts.value.find((item) => item.id === devLoginId.value)
+  if (!account) return
+  username.value = account.username
+  password.value = account.password
+  submitting.value = true
+  try {
+    await auth.login(account.username, account.password)
+    router.replace(account.role === 'admin' ? '/admin' : redirect.value === '/' ? '/student' : redirect.value)
+  } catch (err) {
+    error.value = err?.message || '测试登录失败'
   } finally {
     submitting.value = false
   }
@@ -88,6 +116,22 @@ async function signInWithOidc() {
         {{ oidcLoading ? '正在跳转…' : '使用统一账号登录' }}
       </button>
     </form>
+
+    <div v-if="devLoginEnabled" class="dev-login-options">
+      <label class="form-field">
+        <span>本机测试账号</span>
+        <select v-model="devLoginId" @change="selectDevAccount(devLoginId)">
+          <option value="" disabled>选择测试账号</option>
+          <optgroup label="管理员">
+            <option v-for="account in devLoginAccounts.filter((item) => item.role === 'admin')" :key="account.id" :value="account.id">{{ account.username }} · {{ account.displayName }}</option>
+          </optgroup>
+          <optgroup label="普通用户">
+            <option v-for="account in devLoginAccounts.filter((item) => item.role === 'student')" :key="account.id" :value="account.id">{{ account.username }} · {{ account.displayName }}</option>
+          </optgroup>
+        </select>
+      </label>
+      <button class="btn-ghost" type="button" :disabled="!devLoginId || submitting" @click="quickLogin">{{ submitting ? '登录中…' : '使用选中测试账号登录' }}</button>
+    </div>
 
     <div class="auth-links">
       <RouterLink to="/register">注册新账号</RouterLink>

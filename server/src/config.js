@@ -77,6 +77,8 @@ export const config = {
     // 开发便利开关：忘记密码接口直接把重置链接回显在响应里。
     // 生产必须保持关闭，否则任何人都能重置任意账号。
     exposeResetToken: bool('EXPOSE_RESET_TOKEN', false),
+    // 仅显式开启的本机开发环境允许一键测试账号。
+    devTestLogin: str('NODE_ENV', 'development') !== 'production' && bool('DEV_TEST_LOGIN', false),
   },
 
   cors: {

@@ -2,6 +2,7 @@ import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import pg from 'pg'
 import { applyMigrations } from '../server/src/db/migrations.js'
+import { createDefaultTrainingScene } from '../src/game/defaultTrainingScene.js'
 
 const { Pool } = pg
 
@@ -37,5 +38,12 @@ const { rows } = await app.query(`
 `)
   console.log(`tables in ${config.database}: ${rows.map((row) => row.table_name).join(', ')}`)
 
+const defaultScene = createDefaultTrainingScene()
+const seeded = await app.query(
+  `INSERT INTO training_scenes (id, name, description, difficulty, published, published_at, owner_id, payload)
+   VALUES ($1, $2, $3, $4, TRUE, now(), NULL, $5::jsonb) ON CONFLICT (id) DO NOTHING`,
+  [defaultScene.id, defaultScene.name, defaultScene.description, defaultScene.difficulty, JSON.stringify(defaultScene.payload)]
+)
 await app.end()
 console.log(`initialized schema in ${config.database}`)
+console.log(`default training scene: ${defaultScene.id} (${seeded.rowCount ? 'created' : 'preserved'})`)

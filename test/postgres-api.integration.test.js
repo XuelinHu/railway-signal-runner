@@ -57,6 +57,8 @@ test('PostgreSQL API authentication, paging, and AI persistence', {
       API_HOST: '127.0.0.1',
       API_PORT: String(apiPort),
       JWT_SECRET: 'postgres-integration-test-secret-only',
+      NODE_ENV: 'development',
+      DEV_TEST_LOGIN: 'true',
       OLLAMA_BASE_URL: `http://127.0.0.1:${ollamaPort}`,
     },
     stdio: 'ignore',
@@ -68,6 +70,17 @@ test('PostgreSQL API authentication, paging, and AI persistence', {
   const health = await getJson(`${baseUrl}/api/health`)
   assert.equal(health.body.database.ok, true)
   assert.equal(health.body.ollama.ok, true)
+
+  const devConfig = await getJson(`${baseUrl}/api/auth/dev-login/config`, null, { 'x-rsr-dev-local': '1' })
+  assert.equal(devConfig.body.enabled, true)
+  for (const account of [{ id: 'devtest-student-01', role: 'student' }, { id: 'devtest-admin', role: 'admin' }]) {
+    const testSession = await postJson(`${baseUrl}/api/auth/dev-login`, { id: account.id }, { 'x-rsr-dev-local': '1' })
+    assert.equal(testSession.status, 200)
+    assert.equal(testSession.body.user.role, account.role)
+    assert.ok(testSession.body.accessToken)
+    const me = await getJson(`${baseUrl}/api/auth/me`, testSession.body.accessToken)
+    assert.equal(me.body.user.role, account.role)
+  }
 
   const adminPassword = `Admin${Date.now()}_TestA9`
   const adminSeed = spawnSync(process.execPath, [
@@ -138,6 +151,8 @@ test('PostgreSQL API authentication, paging, and AI persistence', {
   const chat = await postStream(`${baseUrl}/api/ai/chat`, {
     model: 'integration-chat:latest',
     message: '验证流式会话持久化',
+    sceneContext: '站场信号设备巡检示范场的进站信号机',
+    equipment: { id: 'default-equipment-1', name: '进站信号机' },
   }, headers)
   const frames = chat.split('\n').filter(Boolean).map((line) => JSON.parse(line))
   const meta = frames.find((frame) => frame.__railway === 'meta')
@@ -151,6 +166,8 @@ test('PostgreSQL API authentication, paging, and AI persistence', {
   )
   assert.equal(messages.body.total, 2)
   assert.deepEqual(messages.body.items.map((item) => item.role), ['user', 'assistant'])
+  assert.deepEqual(messages.body.items[0].equipment_context, { id: 'default-equipment-1', name: '进站信号机' })
+  assert.match(messages.body.items[0].scene_context, /进站信号机/)
   const conversations = await getJson(`${baseUrl}/api/users/me/conversations?page=1&pageSize=10`, token)
   assert.equal(conversations.body.total, 1)
 })
@@ -178,9 +195,9 @@ async function waitForApi(baseUrl) {
   throw new Error('API did not become ready within 10 seconds')
 }
 
-async function getJson(url, token) {
+async function getJson(url, token, extraHeaders = {}) {
   const response = await fetch(url, {
-    headers: token ? { authorization: `Bearer ${token}` } : undefined,
+    headers: { ...extraHeaders, ...(token ? { authorization: `Bearer ${token}` } : {}) },
   })
   return { status: response.status, body: await response.json() }
 }

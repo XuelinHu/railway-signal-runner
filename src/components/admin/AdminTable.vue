@@ -6,7 +6,7 @@
  * - format(value, row) 返回展示文本，返回 null/undefined 时显示占位符
  * - 需要自定义渲染时用 #cell-<key> 插槽，行操作用 #row-actions
  */
-defineProps({
+const props = defineProps({
   columns: { type: Array, required: true },
   rows: { type: Array, default: () => [] },
   loading: { type: Boolean, default: false },
@@ -27,8 +27,8 @@ function cellText(column, row) {
 }
 
 function sortMark(column) {
-  if (column.key !== sort) return ''
-  return order === 'asc' ? '↑' : '↓'
+  if (column.key !== props.sort) return ''
+  return props.order === 'asc' ? '↑' : '↓'
 }
 </script>
 

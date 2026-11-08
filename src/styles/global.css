@@ -700,6 +700,141 @@ button {
   }
 }
 
+/* The inspection mode keeps the 3D railway unframed, with light instrument UI. */
+.game-stage:not(.editor-active) {
+  background: #dceaf0;
+  color: #20332d;
+}
+
+.game-stage:not(.editor-active) .topbar,
+.game-stage:not(.editor-active) .mission-panel,
+.game-stage:not(.editor-active) .metric-strip,
+.game-stage:not(.editor-active) .objective-dock,
+.game-stage:not(.editor-active) .cesium-map-shell {
+  border-color: rgba(33, 69, 55, 0.18);
+  background: rgba(250, 253, 250, 0.93);
+  color: #20332d;
+  box-shadow: 0 8px 28px rgba(37, 65, 55, 0.12);
+}
+
+.game-stage:not(.editor-active) .brand-copy strong,
+.game-stage:not(.editor-active) .mission-panel strong,
+.game-stage:not(.editor-active) .objective-dock strong,
+.game-stage:not(.editor-active) .target-row strong {
+  color: #20332d;
+}
+
+.game-stage:not(.editor-active) .brand-copy span,
+.game-stage:not(.editor-active) .panel-heading span,
+.game-stage:not(.editor-active) .objective-label,
+.game-stage:not(.editor-active) .map-header span,
+.game-stage:not(.editor-active) .target-row div span {
+  color: #576d63;
+}
+
+.game-stage:not(.editor-active) .tool-button:not(.primary),
+.game-stage:not(.editor-active) .icon-button {
+  color: #20332d;
+  border-color: rgba(32, 66, 53, 0.2);
+  background: #f4f8f4;
+}
+
+.game-stage:not(.editor-active) .metric-item,
+.game-stage:not(.editor-active) .target-row {
+  color: #20332d;
+  border-color: rgba(32, 66, 53, 0.1);
+  background: #f4f8f4;
+}
+
+.game-stage:not(.editor-active) .metric-item svg,
+.game-stage:not(.editor-active) .coordinate-readout {
+  color: #267563;
+}
+
+.game-stage:not(.editor-active) .progress-track { background: #dbe6de; }
+.game-stage:not(.editor-active) .target-row.active { border-color: #c67a48; background: #fff3e8; }
+.game-stage:not(.editor-active) .target-row.done { border-color: #5eaa91; background: #e8f6ee; }
+.game-stage:not(.editor-active) .crosshair { display: none; }
+
+.game-stage:not(.editor-active) .center-panel.start-panel {
+  top: auto;
+  bottom: 78px;
+  width: auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  transform: translateX(-50%);
+}
+
+.game-stage:not(.editor-active) .start-panel img,
+.game-stage:not(.editor-active) .start-copy { display: none; }
+
+.equipment-chat-prompt {
+  position: absolute;
+  top: 388px;
+  right: 18px;
+  z-index: 11;
+  width: min(330px, calc(100vw - 36px));
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  border: 1px solid rgba(37, 99, 75, 0.24);
+  border-radius: 6px;
+  background: rgba(250, 253, 250, 0.96);
+  box-shadow: 0 12px 30px rgba(32, 57, 47, 0.16);
+  color: #20332d;
+}
+
+.equipment-chat-prompt > span { color: #3a7764; font-size: 12px; }
+.equipment-chat-prompt strong { font-size: 17px; }
+.equipment-chat-prompt p { margin: 0; color: #52685e; font-size: 12px; line-height: 1.5; }
+.equipment-chat-prompt button { justify-self: start; }
+
+.scene-storage-status {
+  color: #b4c9bf;
+  font-size: 11px;
+}
+
+main.student-page {
+  background: linear-gradient(rgba(241, 248, 242, 0.88), rgba(241, 248, 242, 0.96)),
+    url('/assets/images/locamotive_bg.png') center / cover;
+  color: #20332d;
+}
+
+main.student-page .student-header h1 { font-size: 34px; }
+.student-header span { color: #387961; }
+.student-page .back-link { color: #315b4d; }
+.student-page .scene-card,
+.student-page .empty-scenes {
+  border-color: rgba(36, 89, 68, 0.16);
+  background: rgba(255, 255, 255, 0.93);
+  box-shadow: 0 8px 22px rgba(32, 60, 45, 0.08);
+}
+.student-page .scene-card strong,
+.student-page .empty-scenes strong { color: #20332d; }
+.student-page .scene-card span,
+.student-page .empty-scenes span { color: #52685e; }
+.student-page .scene-card.default-scene { border-left: 4px solid #cf7845; }
+.student-page .scene-card small { display: block; margin-bottom: 4px; color: #b15f35; font-weight: 700; }
+.student-launch-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.student-launch-actions .launch-button { margin: 0; }
+.student-launch-actions .tool-button { color: #25463a; border-color: #aec7b8; background: #fff; }
+
+@media (max-width: 760px) {
+  .equipment-chat-prompt { top: 152px; right: 10px; }
+  .student-launch-actions { width: 100%; }
+  .game-stage:not(.editor-active) .topbar .tool-button {
+    width: 38px;
+    min-width: 38px;
+    padding: 0;
+  }
+  .game-stage:not(.editor-active) .topbar .tool-button span { display: none; }
+  body:has(.game-stage:not(.editor-active)) .agent-fab { bottom: 315px; }
+  body:has(.game-stage:not(.editor-active)) .imagegen-link { bottom: 370px; }
+}
+
 .hidden-file-input {
   display: none;
 }

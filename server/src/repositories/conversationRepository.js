@@ -18,12 +18,12 @@ export function getConversation(id) {
   )
 }
 
-export async function appendMessage({ conversationId, userId, role, content, model, status, error }) {
+export async function appendMessage({ conversationId, userId, role, content, model, status, error, sceneContext, equipment }) {
   const row = await queryOne(
-    `INSERT INTO ai_messages (conversation_id, user_id, role, content, model, status, error)
-     VALUES ($1, $2, $3, $4, $5, $6, $7)
-     RETURNING id, conversation_id, role, content, model, status, created_at`,
-    [conversationId, userId ?? null, role, content ?? '', model ?? null, status ?? 'ok', error ?? null]
+    `INSERT INTO ai_messages (conversation_id, user_id, role, content, model, status, error, scene_context, equipment_context)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb)
+     RETURNING id, conversation_id, role, content, model, status, scene_context, equipment_context, created_at`,
+    [conversationId, userId ?? null, role, content ?? '', model ?? null, status ?? 'ok', error ?? null, sceneContext ?? null, JSON.stringify(equipment ?? null)]
   )
 
   await query(
@@ -66,7 +66,7 @@ export async function recentMessages(conversationId, limit = 20) {
 
 export async function listMessages(conversationId, { limit, offset }) {
   const { rows } = await query(
-    `SELECT id, role, content, model, prompt_tokens, completion_tokens, latency_ms, status, created_at,
+    `SELECT id, role, content, model, prompt_tokens, completion_tokens, latency_ms, status, scene_context, equipment_context, created_at,
             COUNT(*) OVER()::int AS total_count
      FROM ai_messages
      WHERE conversation_id = $1

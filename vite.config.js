@@ -9,6 +9,17 @@ import cesium from 'vite-plugin-cesium'
 const API_PORT = process.env.API_PORT || 8038
 const API_TARGET = process.env.VITE_API_TARGET || `http://127.0.0.1:${API_PORT}`
 const useHttps = process.env.DEV_HTTPS === '1'
+let localDevServer = false
+const localDevOnlyProxy = {
+  name: 'local-dev-only-proxy',
+  configureServer(server) {
+    server.httpServer?.once('listening', () => {
+      const address = server.httpServer.address()
+      localDevServer = typeof address !== 'string' &&
+        (address?.address === '127.0.0.1' || address?.address === '::1')
+    })
+  },
+}
 const httpsPort = 4092
 const tlsDirectory = resolve(process.cwd(), '../identity-service/tls/apps/railway-signal-runner')
 const tlsCert = resolve(tlsDirectory, 'server.crt')
@@ -32,8 +43,15 @@ const apiProxy = {
     changeOrigin: true,
     ws: true,
     configure: (proxy) => {
-      proxy.on('proxyReq', (proxyReq) => {
+      proxy.on('proxyReq', (proxyReq, req) => {
         proxyReq.removeHeader('origin')
+        proxyReq.removeHeader('x-rsr-dev-local')
+        const remote = req.socket.remoteAddress
+        const host = req.headers.host || ''
+        if (localDevServer && (remote === '127.0.0.1' || remote === '::1' || remote === '::ffff:127.0.0.1') &&
+            /^(?:localhost|127\.0\.0\.1|\[::1\]):\d+$/.test(host)) {
+          proxyReq.setHeader('x-rsr-dev-local', '1')
+        }
       })
     },
   },
@@ -53,7 +71,7 @@ const preserveReleaseApk = {
 }
 
 export default defineConfig({
-  plugins: [vue(), cesium(), preserveReleaseApk],
+  plugins: [vue(), cesium(), preserveReleaseApk, localDevOnlyProxy],
   server: {
     host: '0.0.0.0',
     port: useHttps ? httpsPort : 4029,

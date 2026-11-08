@@ -38,6 +38,7 @@ export const useAgentStore = defineStore('agent', () => {
 
   /** 游戏内注入的场景上下文，作为系统提示词的一部分发给后端。 */
   const sceneContext = ref('')
+  const equipmentContext = ref(null)
 
   const availableModels = computed(() => models.value.filter((item) => item.available && !item.isEmbedding))
   const currentModel = computed(
@@ -54,7 +55,8 @@ export const useAgentStore = defineStore('agent', () => {
       const names = availableModels.value.map((item) => item.name)
       // 存着的模型可能已经被删了，回落到服务端默认模型。
       if (!names.includes(model.value)) {
-        model.value = names.includes(data.defaultModel) ? data.defaultModel : (names[0] ?? '')
+        model.value = names.find((name) => /deepseek/i.test(name)) ||
+          (names.includes(data.defaultModel) ? data.defaultModel : (names[0] ?? ''))
         writeStored(MODEL_STORAGE_KEY, model.value)
       }
     } catch (error) {
@@ -161,6 +163,7 @@ export const useAgentStore = defineStore('agent', () => {
         model: model.value || undefined,
         message: content,
         sceneContext: sceneContext.value || undefined,
+        equipment: equipmentContext.value || undefined,
       },
       {
         onControl: (type, payload) => {
@@ -318,6 +321,7 @@ export const useAgentStore = defineStore('agent', () => {
     currentModel,
     availableModels,
     sceneContext,
+    equipmentContext,
     conversations,
     conversationId,
     messages,

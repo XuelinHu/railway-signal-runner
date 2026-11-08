@@ -9,15 +9,17 @@
   <img height="20" alt="License GPL-2.0" src="https://img.shields.io/badge/license-GPL--2.0-3DA639" />
 </p>
 
-基于 Vue 3、CesiumJS、Three.js 和 GLTFLoader 的第一人称铁道信号巡视小游戏。
+基于 Vue 3、CesiumJS、Three.js 和 GLTFLoader 的铁道信号巡检仿真实训平台。
 
 ## 功能
 
-- 第一人称视角移动、鼠标视角控制、移动端方向控制
+- 亮色第三人称巡检视角、鼠标视角控制与移动端方向控制
+- 首次进入即加载固定 ID 的示范场景，使用项目已有的人物、信号机、道岔、桥梁与站台 GLB 模型
 - 复用 `railway_sign` 中的铁路、车站、桥梁、信号机、机车和人物 GLB 模型
 - 铁路沿线信号机巡视目标、计时、速度、里程和完成度 HUD
 - CesiumJS 小地图同步显示玩家位置和线路点位
 - 本地音效开关、重置、地图显示切换
+- 靠近巡检设备后可直接询问智能体；登录后的问题、回复和设备关联保存到 PostgreSQL
 
 ## 平台能力
 
@@ -78,6 +80,7 @@ RUN_POSTGRES_INTEGRATION=1 node --env-file=server/.env --test test/postgres-api.
 ```bash
 npm install
 npm run db:init                                        # 使用项目运行角色幂等建表
+npm run seed:training                                  # 已建表时补默认实训场，不覆盖教师保存版本
 npm run seed:demo                                      # 造分页验证用的演示数据（demo- 前缀，可 --clean）
 npm run dev                                            # 前端 4029
 npm run api                                            # 后端 8038（api:dev 为 node --watch）
@@ -103,11 +106,18 @@ Read-Host '管理员密码' -AsSecureString | ForEach-Object {
 ### 浏览器本地数据库
 
 - IndexedDB / Dexie，数据库名 `railway-signal-runner`，对象仓库 `scenes`、`records`。
-- 未登录或离线时仍走这条链路，老师端和学生端在无后端时照常可用。
+- 首次进入教师端或学生端时只在缺失时保存默认实训场；未登录或离线时继续使用本地版本。
+- 教师端已登录 teacher/admin 时，“保存场景”在本地保存和导出 JSON 之外，还会向云端场景接口写入并更新发布状态；未登录时界面明确显示“保存位置：当前浏览器”。学生端优先载入云端已发布场景，网络不可用时回退本地。
+
+### 本机测试登录
+
+在 `server/.env` 设置 `NODE_ENV=development` 与 `DEV_TEST_LOGIN=true` 并重启 API。服务启动时会创建 `test_admin` 和 `test_student`。前端也必须**只监听本机**，例如执行 `npm run dev -- --host 127.0.0.1`，然后在 `http://127.0.0.1:4029/#/login` 点击“管理员”或“普通用户”直接登录，无需保存固定密码。默认监听所有网卡的前端不会显示一键入口；生产模式完全禁用。测试账号不会覆盖同名的现有账号，也不可作为正式账户使用。开发结束后关闭此开关并重启 API。
 
 ### PostgreSQL
 
 - 已真实接入运行时，API 直接读写；数据库名 `railway_signal_runner`，初始化脚本 `scripts/init-postgres.mjs` 只执行 schema migration，不创建数据库。
+- 默认场景由 API 启动或 `npm run seed:training` 以固定 ID 幂等写入 PostgreSQL（`ON CONFLICT DO NOTHING`）；已有教师场景不会被种子覆盖。
+- `009_ai_equipment_context.sql` 为 AI 消息增加 `scene_context`、`equipment_context` 字段。已有表的结构迁移需要表所有者权限；受限运行账号遇到 `must be owner of table` 时由数据库维护者应用迁移并登记 checksum，不要修改已应用的初始 schema。
 - 运行连接使用 `PGUSER=railway_signal_runner_app` 和本项目独立口令；`deipss` 等管理员身份仅用于人工 provision，不得放进应用运行配置。LAN 连接可设置 `PGHOST=192.168.1.9`、`PGPORT=5433`。
 - 表：`users`、`refresh_tokens`、`password_reset_tokens`、`login_logs`、`ai_conversations`、`ai_messages`、`ai_request_logs`、`system_settings`、`audit_logs`，以及扩展后的 `training_scenes`、`training_records`。
 - 配置模板见 `server/env.example`，复制为 `server/.env` 后填写；`server/.env` 已被 `.gitignore` 忽略，**切勿提交**。

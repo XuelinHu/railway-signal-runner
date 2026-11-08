@@ -6,7 +6,7 @@ export const sceneApi = {
   list: (params) => http.get('/scenes', { query: toQuery(params) }),
   get: (id) => http.get(`/scenes/${id}`),
   create: (payload) => http.post('/scenes', payload),
-  publish: (id) => http.post(`/scenes/${id}/publish`, {}),
+  publish: (id, published = true) => http.post(`/scenes/${id}/publish`, { published }),
   remove: (id) => http.delete(`/scenes/${id}`),
 }
 

@@ -157,6 +157,9 @@ function close() {
       </div>
 
       <div ref="bodyRef" class="agent-body">
+        <div v-if="agent.equipmentContext" class="agent-equipment-context">
+          当前设备：<strong>{{ agent.equipmentContext.name }}</strong>
+        </div>
         <div v-if="agent.messages.length === 0 && !agent.streaming" class="agent-empty">
           <p>我是铁道信号巡检助手，可以问：</p>
           <p>「进站信号机红灯的含义是什么？」</p>

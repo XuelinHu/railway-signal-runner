@@ -9,10 +9,11 @@ import { Bot, Image } from '@lucide/vue'
 import { useAgentStore } from '../../stores/agent'
 
 const agent = useAgentStore()
+const imagegenUrl = typeof window === 'undefined' ? '' : `http://${window.location.hostname}:4050/`
 </script>
 
 <template>
-  <a class="imagegen-link" :href="`http://${window.location.hostname}:4050/`" target="_blank" rel="noopener noreferrer" title="AI 绘画" aria-label="AI 绘画"><Image :size="18" /></a>
+  <a class="imagegen-link" :href="imagegenUrl" target="_blank" rel="noopener noreferrer" title="AI 绘画" aria-label="AI 绘画"><Image :size="18" /></a>
   <button
     v-if="!agent.open"
     class="agent-fab"

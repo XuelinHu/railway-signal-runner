@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { after, before, test } from 'node:test'
 import { createApp } from '../server/src/app.js'
+import { config } from '../server/src/config.js'
 
 let server
 let baseUrl
@@ -27,6 +28,26 @@ test('root route reports the service without exposing Express headers', async ()
   assert.equal(body.ok, true)
   assert.equal(body.service, 'railway-signal-runner-api')
   assert.equal(response.headers.has('x-powered-by'), false)
+})
+
+test('development test login is unavailable unless explicitly enabled', async () => {
+  const original = config.auth.devTestLogin
+  config.auth.devTestLogin = false
+  try {
+  const configResponse = await fetch(`${baseUrl}/api/auth/dev-login/config`)
+  assert.equal(configResponse.status, 200)
+  assert.equal((await configResponse.json()).enabled, false)
+
+  const response = await fetch(`${baseUrl}/api/auth/dev-login`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ id: 'devtest-admin' }),
+  })
+  assert.equal(response.status, 403)
+  assert.equal((await response.json()).code, 'dev_login_disabled')
+  } finally {
+    config.auth.devTestLogin = original
+  }
 })
 
 test('registration rejects a weak password before any database access', async () => {
