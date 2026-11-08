@@ -10,6 +10,7 @@ import android.os.Bundle;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowInsets;
+import android.view.Gravity;
 import android.widget.Button;
 import android.webkit.PermissionRequest;
 import android.webkit.WebChromeClient;
@@ -60,16 +61,23 @@ public final class MainActivity extends Activity {
         });
         LinearLayout toolbar = new LinearLayout(this);
         toolbar.setOrientation(LinearLayout.HORIZONTAL);
+        toolbar.setGravity(Gravity.END | Gravity.CENTER_VERTICAL);
         Button serverButton = new Button(this);
-        serverButton.setText("服务地址");
+        serverButton.setText("设");
         serverButton.setOnClickListener(view -> showServerDialog());
         Button refreshButton = new Button(this);
-        refreshButton.setText("刷新");
+        refreshButton.setText("刷");
         refreshButton.setOnClickListener(view -> webView.reload());
-        toolbar.addView(serverButton, new LinearLayout.LayoutParams(0, dp(48), 1));
-        toolbar.addView(refreshButton, new LinearLayout.LayoutParams(0, dp(48), 1));
+        for (Button button : new Button[]{serverButton, refreshButton}) {
+            button.setTextSize(10);
+            button.setMinHeight(0);
+            button.setMinWidth(0);
+            button.setPadding(0, 0, 0, 0);
+        }
+        toolbar.addView(serverButton, new LinearLayout.LayoutParams(dp(36), dp(24)));
+        toolbar.addView(refreshButton, new LinearLayout.LayoutParams(dp(36), dp(24)));
         root.addView(toolbar, new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(48)));
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(24)));
         webView = new WebView(this);
         progressBar = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
         progressBar.setMax(100);
