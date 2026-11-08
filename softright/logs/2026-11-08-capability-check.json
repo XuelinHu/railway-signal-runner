@@ -1,0 +1,15 @@
+{
+  "voice": {
+    "browser": "页面按运行环境探测；当前 HTTP 局域网页面不满足浏览器语音识别安全上下文条件，界面保留文字输入和朗读降级",
+    "android": "原生语音桥接代码已存在，但本轮未取得麦克风授权和识别结果证据",
+    "result": "未完成真机语音验收"
+  },
+  "image": {
+    "service": "http://192.168.1.9:4050/",
+    "endpoint": "/api/generate",
+    "request": {"prompt": "railway signal inspection training scene, railway signal, clean educational illustration", "size": 256, "steps": 4},
+    "httpStatus": 200,
+    "output": "images/screenshots/本轮-AI绘图.png",
+    "result": "通过"
+  }
+}
