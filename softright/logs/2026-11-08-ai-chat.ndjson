@@ -1,0 +1,1 @@
+{"test":"ai-chat-stream","role":"student","model":"qwen3:4b","scene":"builtin-railway-inspection-v1","equipment":"进站信号机","httpStatus":200,"streamFrames":["meta","thinking","content","done"],"conversationId":"c_573lucrlcvxx802joxvc","userMessageId":5,"assistantMessageId":6,"firstTokenMs":4842,"latencyMs":4910,"result":"通过"}
