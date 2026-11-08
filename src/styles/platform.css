@@ -384,6 +384,12 @@
     max-width: 100%;
     overflow-wrap: anywhere;
   }
+
+  /* 手机端只保留登录主流程，测试入口和说明性副标题不占用首屏。 */
+  .auth-subtitle,
+  .dev-login-options {
+    display: none;
+  }
 }
 
 /* 密码规则实时校验 */

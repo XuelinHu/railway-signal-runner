@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900">
+  <rect width="1600" height="900" fill="#fffdf8"/>
+  <text x="40" y="58" font-family="Microsoft YaHei, sans-serif" font-size="28" font-weight="700" fill="#17211d">第一人称铁道信号巡检仿真实训平台：运行架构</text>
+  <g font-family="Microsoft YaHei, sans-serif" font-size="20" fill="#17211d" text-anchor="middle">
+    <rect x="40" y="100" width="1520" height="170" rx="18" fill="#e8f2e9" stroke="#2f6b4f" stroke-width="3"/><text x="800" y="132" font-weight="700">终端层</text>
+    <rect x="90" y="158" width="300" height="90" rx="12" fill="#fff7df" stroke="#bd8b24" stroke-width="3"/><text x="240" y="194">Windows 浏览器</text><text x="240" y="224" font-size="16">Vue / 教师 / 学生 / 管理台</text>
+    <rect x="440" y="158" width="300" height="90" rx="12" fill="#fff7df" stroke="#bd8b24" stroke-width="3"/><text x="590" y="194">Android WebView</text><text x="590" y="224" font-size="16">局域网页面与语音权限</text>
+    <rect x="790" y="158" width="300" height="90" rx="12" fill="#f4ece3" stroke="#a86b3d" stroke-width="3"/><text x="940" y="194">IndexedDB / Dexie</text><text x="940" y="224" font-size="16">scenes、records</text>
+    <rect x="1140" y="158" width="300" height="90" rx="12" fill="#f4ece3" stroke="#a86b3d" stroke-width="3"/><text x="1290" y="194">Vite 同源代理</text><text x="1290" y="224" font-size="16">/api → API 服务</text>
+    <rect x="40" y="320" width="1520" height="190" rx="18" fill="#f1e8f5" stroke="#7b4c8c" stroke-width="3"/><text x="800" y="352" font-weight="700">服务层</text>
+    <rect x="140" y="385" width="300" height="100" rx="12" fill="#fff7df" stroke="#bd8b24" stroke-width="3"/><text x="290" y="425">Express API</text><text x="290" y="456" font-size="16">认证、场景、成绩、AI</text>
+    <rect x="600" y="385" width="300" height="100" rx="12" fill="#fff7df" stroke="#bd8b24" stroke-width="3"/><text x="750" y="425">领域服务与仓储</text><text x="750" y="456" font-size="16">用户、记录、审计</text>
+    <rect x="1060" y="385" width="300" height="100" rx="12" fill="#f4ece3" stroke="#a86b3d" stroke-width="3"/><text x="1210" y="425">Ollama</text><text x="1210" y="456" font-size="16">qwen3:4b 等模型</text>
+    <rect x="40" y="560" width="1520" height="170" rx="18" fill="#f6e6e5" stroke="#a44e4b" stroke-width="3"/><text x="800" y="592" font-weight="700">数据层</text>
+    <rect x="260" y="620" width="360" height="90" rx="12" fill="#fff7df" stroke="#bd8b24" stroke-width="3"/><text x="440" y="656">PostgreSQL 18</text><text x="440" y="686" font-size="16">用户、场景、记录、会话</text>
+    <rect x="780" y="620" width="360" height="90" rx="12" fill="#f4ece3" stroke="#a86b3d" stroke-width="3"/><text x="960" y="656">静态资源</text><text x="960" y="686" font-size="16">GLB / Cesium / APK</text>
+  </g>
+  <g stroke="#6d7a72" stroke-width="4" fill="none" marker-end="url(#arrow)"><path d="M390 203H1140"/><path d="M740 203H1140"/><path d="M1290 248V385H440"/><path d="M440 435H600"/><path d="M750 485V620H440"/><path d="M900 435H1060"/><path d="M390 203H790"/></g>
+  <defs><marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#6d7a72"/></marker></defs>
+</svg>

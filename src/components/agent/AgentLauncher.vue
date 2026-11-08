@@ -28,4 +28,7 @@ const imagegenUrl = typeof window === 'undefined' ? '' : `http://${window.locati
 
 <style scoped>
 .imagegen-link { position: fixed; right: 22px; bottom: 86px; z-index: 1001; display: grid; place-items: center; width: 42px; height: 42px; border-radius: 6px; background: #126a62; color: white; }
+@media (max-width: 760px) {
+  .imagegen-link { display: none; }
+}
 </style>

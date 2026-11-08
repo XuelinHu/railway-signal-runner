@@ -1,0 +1,29 @@
+<mxfile host="app.diagrams.net" modified="2026-11-08T13:12:00+08:00" agent="Codex" version="24.7.17" type="device">
+  <diagram id="railway-signal-runner-architecture" name="系统架构">
+    <mxGraphModel dx="1422" dy="794" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="900" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/><mxCell id="1" parent="0"/>
+        <mxCell id="title" value="第一人称铁道信号巡检仿真实训平台：运行架构" style="text;html=1;strokeColor=none;fillColor=none;fontSize=24;fontStyle=1;fontColor=#17211d;" vertex="1" parent="1"><mxGeometry x="40" y="24" width="800" height="40" as="geometry"/></mxCell>
+        <mxCell id="clientLayer" value="终端层" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e8f2e9;strokeColor=#2f6b4f;fontColor=#234332;fontSize=18;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="40" y="100" width="1520" height="170" as="geometry"/></mxCell>
+        <mxCell id="web" value="Windows 浏览器\nVue 3 + Vite\n教师端 / 学生端 / 管理台" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff7df;strokeColor=#bd8b24;fontColor=#3e3111;fontSize=16;" vertex="1" parent="1"><mxGeometry x="90" y="150" width="300" height="90" as="geometry"/></mxCell>
+        <mxCell id="android" value="Android WebView\n局域网服务地址\n移动端页面与语音权限" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff7df;strokeColor=#bd8b24;fontColor=#3e3111;fontSize=16;" vertex="1" parent="1"><mxGeometry x="440" y="150" width="300" height="90" as="geometry"/></mxCell>
+        <mxCell id="browserDb" value="浏览器本地层\nIndexedDB / Dexie\nscenes、records" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f4ece3;strokeColor=#a86b3d;fontColor=#4c2c18;fontSize=16;" vertex="1" parent="1"><mxGeometry x="790" y="150" width="300" height="90" as="geometry"/></mxCell>
+        <mxCell id="proxy" value="Vite 同源代理\n/api → API 服务" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f4ece3;strokeColor=#a86b3d;fontColor=#4c2c18;fontSize=16;" vertex="1" parent="1"><mxGeometry x="1140" y="150" width="300" height="90" as="geometry"/></mxCell>
+        <mxCell id="serviceLayer" value="服务层" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f1e8f5;strokeColor=#7b4c8c;fontColor=#3e244a;fontSize=18;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="40" y="320" width="1520" height="190" as="geometry"/></mxCell>
+        <mxCell id="api" value="Express API\n认证 / 角色权限\n场景 / 成绩 / AI 路由" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff7df;strokeColor=#bd8b24;fontColor=#3e3111;fontSize=16;" vertex="1" parent="1"><mxGeometry x="140" y="375" width="300" height="100" as="geometry"/></mxCell>
+        <mxCell id="domain" value="领域服务与仓储\n用户、场景、记录、会话\n迁移与审计" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff7df;strokeColor=#bd8b24;fontColor=#3e3111;fontSize=16;" vertex="1" parent="1"><mxGeometry x="600" y="375" width="300" height="100" as="geometry"/></mxCell>
+        <mxCell id="ollama" value="Ollama\nqwen3:4b 等模型\n流式 NDJSON 对话" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f4ece3;strokeColor=#a86b3d;fontColor=#4c2c18;fontSize=16;" vertex="1" parent="1"><mxGeometry x="1060" y="375" width="300" height="100" as="geometry"/></mxCell>
+        <mxCell id="dataLayer" value="数据层" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f6e6e5;strokeColor=#a44e4b;fontColor=#4c2020;fontSize=18;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="40" y="560" width="1520" height="170" as="geometry"/></mxCell>
+        <mxCell id="pg" value="PostgreSQL 18\nusers / training_scenes\ntraining_records / AI 会话 / 审计" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff7df;strokeColor=#bd8b24;fontColor=#3e3111;fontSize=16;" vertex="1" parent="1"><mxGeometry x="260" y="610" width="360" height="90" as="geometry"/></mxCell>
+        <mxCell id="assets" value="静态资源\nGLB 模型 / Cesium / 音频\n构建产物与 Android APK" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f4ece3;strokeColor=#a86b3d;fontColor=#4c2c18;fontSize=16;" vertex="1" parent="1"><mxGeometry x="780" y="610" width="360" height="90" as="geometry"/></mxCell>
+        <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#6d7a72;" edge="1" parent="1" source="web" target="proxy"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#6d7a72;" edge="1" parent="1" source="android" target="proxy"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#6d7a72;" edge="1" parent="1" source="proxy" target="api"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#6d7a72;" edge="1" parent="1" source="api" target="domain"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#6d7a72;" edge="1" parent="1" source="domain" target="pg"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e6" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#6d7a72;" edge="1" parent="1" source="domain" target="ollama"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e7" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#6d7a72;" edge="1" parent="1" source="web" target="browserDb"><mxGeometry relative="1" as="geometry"/></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

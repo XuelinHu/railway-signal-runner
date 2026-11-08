@@ -1,12 +1,13 @@
 import { http } from './client'
 
 const publicOptions = { skipAuth: true }
+const devLoginOptions = { skipAuth: true, headers: { 'X-RSR-Dev-Local': '1' } }
 
 export const authApi = {
   register: (payload) => http.post('/auth/register', payload, publicOptions),
   login: (payload) => http.post('/auth/login', payload, publicOptions),
-  devLoginConfig: () => http.get('/auth/dev-login/config', publicOptions),
-  devLogin: (id) => http.post('/auth/dev-login', { id }, publicOptions),
+  devLoginConfig: () => http.get('/auth/dev-login/config', devLoginOptions),
+  devLogin: (id) => http.post('/auth/dev-login', { id }, devLoginOptions),
   logout: (payload = {}) => http.post('/auth/logout', payload),
   me: () => http.get('/auth/me'),
   oidcConfig: () => http.get('/auth/oidc/config', publicOptions),

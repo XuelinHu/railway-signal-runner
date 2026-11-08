@@ -1245,6 +1245,14 @@ main.student-page .student-header h1 { font-size: 34px; }
     align-items: end;
   }
 
+  .role-kicker {
+    display: none;
+  }
+
+  .role-hero h1 {
+    margin-top: 0;
+  }
+
   .student-header,
   .scene-card {
     align-items: stretch;
